@@ -3,18 +3,39 @@
 
 * {
   margin: 0;
-  padding: 0;
   box-sizing: border-box;
   transition: all 0.3s ease-in-out;
   font-family: 'Inter', sans-serif;
 }
 
+.btn {
+  @apply flex items-center justify-center   rounded-md text-center active:scale-[0.99] duration-75 ease-linear cursor-pointer;
+}
+
+.input {
+  @apply text-sm h-10 flex items-center ease-in border bg-white border-border focus:outline-none focus:ring-0 focus:border-border focus:ease-in transition-colors duration-300 focus-visible:outline-none focus-visible:border focus-visible:border-blue270 py-2 rounded-md w-full;
+}
+
+.thead-tr {
+  @apply h-10 w-full bg-white border border-y border-x-0 border-border;
+}
+
+.thead-td {
+  @apply text-black100 font-medium text-base text-center truncate px-4;
+}
+
+.tbody-tr {
+  @apply h-12 items-center justify-center w-full bg-white border border-y border-x-0 border-border cursor-pointer;
+}
+
+.tbody-td {
+  @apply text-black100 font-normal text-sm lg:text-base text-center truncate h-12 w-1/3;
+}
 @theme {
   --font-sans: 'Inter', sans-serif;
   --font-serif: 'Inter', sans-serif;
   --font-mono: 'Inter', sans-serif;
 
-  /* Corpo da fonte */
   --font-weight-thin: 100;
   --font-weight-extralight: 200;
   --font-weight-light: 300;
@@ -24,6 +45,7 @@
   --font-weight-bold: 700;
   --font-weight-extrabold: 800;
   --font-weight-black: 900;
+
   --color-*: initial;
   --color-black100: rgb(19, 19, 20);
   --color-black200: rgb(31, 31, 33);

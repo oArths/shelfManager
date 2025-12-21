@@ -1,0 +1,92 @@
+[
+  {
+    "nome": "Prateleira A",
+    "locais": [
+      {
+        "idItem": "001",
+        "name": "Produto 1",
+        "image": "/images/produto-1.png",
+        "code": "ABC-123"
+      },
+      {
+        "idItem": "002",
+        "name": "Produto 2",
+        "image": "/images/produto-2.png",
+        "code": "DEF-456"
+      }
+    ]
+  },
+  {
+    "nome": "Prateleira A",
+    "locais": [
+      {
+        "idItem": "001",
+        "name": "Produto 1",
+        "image": "/images/produto-1.png",
+        "code": "ABC-123"
+      },
+      {
+        "idItem": "002",
+        "name": "Produto 2",
+        "image": "/images/produto-2.png",
+        "code": "DEF-456"
+      }
+    ]
+  },
+  {
+    "nome": "Prateleira A",
+    "locais": [
+      {
+        "idItem": "001",
+        "name": "Produto 1",
+        "image": "/images/produto-1.png",
+        "code": "ABC-123"
+      },
+      {
+        "idItem": "002",
+        "name": "Produto 2",
+        "image": "/images/produto-2.png",
+        "code": "DEF-456"
+      }
+    ]
+  },
+  {
+    "nome": "Prateleira A",
+    "locais": [
+      {
+        "idItem": "001",
+        "name": "Produto 1",
+        "image": "/images/produto-1.png",
+        "code": "ABC-123"
+      },
+      {
+        "idItem": "002",
+        "name": "Produto 2",
+        "image": "/images/produto-2.png",
+        "code": "DEF-456"
+      }
+    ]
+  },
+  {
+    "nome": "Prateleira B",
+    "locais": [
+      {
+        "idItem": "003",
+        "name": "Produto 3",
+        "image": "/images/produto-3.png",
+        "code": "GHI-789"
+      }
+    ]
+  },
+  {
+    "nome": "Prateleira B",
+    "locais": [
+      {
+        "idItem": "003",
+        "name": "Produto 3",
+        "image": "/images/produto-3.png",
+        "code": "GHI-789"
+      }
+    ]
+  }
+]
