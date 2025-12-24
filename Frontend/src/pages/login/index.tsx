@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import logo from '../../../public/logo.png';
+import logo from '../../assets/logo.png';
 import toast, { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, useLocation } from 'react-router-dom';

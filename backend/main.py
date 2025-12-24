@@ -1,9 +1,17 @@
+import bcrypt
 import sqlite3
 from pathlib import Path
+from fastapi import FastAPI
+from pydantic import BaseModel
 
-DB_PATH = "./data/banco/database.db"
-SCHEMA_PATH = "./data/banco/banco01.sql"
+app = FastAPI()
+DB_PATH = "./db/database.db"
+SCHEMA_PATH = "./db/schema.sql"
 
+class UserCreate(BaseModel):
+    user: str
+    password: str
+    isAdmin: bool = False
 
 def init_db():
 
@@ -19,4 +27,25 @@ def init_db():
     conn.commit()
     conn.close()
 
+def hash_password(password: str) -> bytes:
+    salt = bcrypt.gensalt()
+    return bcrypt.hashpw(password.encode(), salt).decode()
+
+def verify_password(password: str, password_hash: bytes) -> bool:
+   return bcrypt.checkpw(
+        password.encode(),
+        password_hash.encode()
+    )
+
+def createAdmin():
+        
+    hased = hash_password("123456") 
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+
+    cur.execute("INSERT INTO users (username, password_hash, isAdmin) values (?,?,?)", ("admin", hased, True))
+    conn.commit()
+    conn.close()
+
 init_db()
+createAdmin()

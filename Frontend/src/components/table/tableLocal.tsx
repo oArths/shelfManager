@@ -1,27 +1,25 @@
 import { useState } from 'react';
 import Pagination from '../pagination';
-import logo from '../../../public/logo.png';
+import logo from '../../assets/logo.png';
 
 import type { Local } from './interface';
 
 export default function TableLocal({ data }: { data: Local }): React.JSX.Element {
   const [offset, setOffSet] = useState(0);
   const limit = 7;
-  const imgName =
-    'C:\\Users\\70089795\\Documents\\Projetos\\shelfManager\\Frontend\\public\\logo.png';
 
   return (
     <div className="flex flex-col items-start  justify-between w-full min-h-96 h-auto  bg-white border-l border-r   border-border">
       <table className="w-full h-auto  ">
         <thead className="w-full ">
           <tr className="thead-tr ">
-            <td className="thead-td  " scope="col">
+            <td className="thead-td max-lg:hidden " scope="col">
               Imagem
             </td>
             <td className="thead-td" scope="col">
               Nome
             </td>
-            <td className="thead-td" scope="col">
+            <td className="thead-td max-lg:hidden" scope="col">
               Codigo
             </td>
             <td className="thead-td " scope="col">
@@ -45,7 +43,7 @@ export default function TableLocal({ data }: { data: Local }): React.JSX.Element
             data.locais.slice(offset, offset + limit).map((Item, Index) => {
               return (
                 <tr key={Index} className="tbody-tr ">
-                  <td className="tbody-td " scope="row">
+                  <td className="tbody-td max-lg:hidden " scope="row">
                     <div className="w-full h-full flex items-center justify-center">
                       <figure className=" bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
                         <img src={logo} className="aspect-square" />
@@ -54,7 +52,7 @@ export default function TableLocal({ data }: { data: Local }): React.JSX.Element
                     {/* {Item.image} */}
                   </td>
                   <td className="tbody-td">{Item.name}</td>
-                  <td className="tbody-td">{Item.code}</td>
+                  <td className="tbody-td max-lg:hidden">{Item.code}</td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                       <button className="btn px-4 py-1 text-sm bg-blue200/80 text-white">

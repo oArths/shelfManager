@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import * as I from 'lucide-react';
 import Modal from '../../components/modal';
-import logo from '../../../public/logo.png';
+import logo from '../../assets/logo.png';
 import locais from '../../json/locais.json';
 import TableLocal from '../../components/table/tableLocal';
 import TableHistory from "../../components/table/tableHistory";
@@ -53,7 +53,7 @@ export default function Local() {
         <Modal
           onClose={() => setRemoveLocalModal(false)}
           Children={
-            <div className="flex flex-col gap-5 min-w-100 items-center">
+            <div className="flex flex-col gap-5 lg:w-100 items-center">
               <div className=" rounded-full p-3 bg-pink200/10 w-fit">
                 <I.Trash2 className="stroke-pink200" size={53} />
               </div>
@@ -80,8 +80,9 @@ export default function Local() {
       {historyLocalModal && (
         <Modal
           onClose={() => setHistoryLocalModal(false)}
+          isFull={true}
           Children={
-            <div className="flex flex-col gap-5 lg:w-200 w-auto ">
+            <div className="flex flex-col gap-5  w-auto ">
               <nav className=" flex flex-row items-center justify-start gap-5">
                 <figure className=" bg-border rounded-md w-28 h-28 p-1 flex items-center justify-center">
                   <img src={logo} className="aspect-square" />
@@ -100,12 +101,13 @@ export default function Local() {
         <Modal
           onClose={() => setNewLocalModal(false)}
           Children={
-            <div className="flex flex-col gap-5 min-w-100 ">
-              <h2 className="font-medium text-2xl text-black">Adicionar Local</h2>
-              <div className="w-full flex flex-col gap-1 relative ">
-                <label className="text-lg text-black font-medium ">Novo Local</label>
+            <div className="flex flex-col gap-5 lg:w-100 ">
+              <h2 className="font-medium text-xl text-black">Escolha um local para o produto</h2>
+              <div className="w-full flex flex-col gap-1  ">
+                <label className="text-base text-black font-normal ">Novo Local</label>
                 <SingleDropdown
                   filterKey="title"
+                  relative={true}
                   options={chartOptions}
                   selectedOption={optionChart}
                   onOptionSelect={HandlerChartOptionSelect}
@@ -130,7 +132,7 @@ export default function Local() {
         <Modal
           onClose={() => setMoveLocalModal(false)}
           Children={
-            <div className="flex flex-col gap-5 min-w-100  items-center">
+            <div className="flex flex-col gap-5 lg:w-100  items-center">
               <div className=" rounded-full p-3 bg-blue200/10 w-fit">
                 <I.Archive className="stroke-blue200" size={53} />
               </div>

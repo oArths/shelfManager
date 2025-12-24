@@ -1,4 +1,4 @@
-import logo from '../../../public/logo.png';
+import logo from '../../assets/logo.png';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Header() {

@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { normalizeText } from '../../utils/index'
 import type { DropdownProps } from './interface'
 
+
 export default function Dropdown(props: DropdownProps): React.JSX.Element {
   const [isOpen, setIsOpen] = useState<boolean>(false)
   const [search, setSearch] = useState('')
@@ -56,13 +57,12 @@ export default function Dropdown(props: DropdownProps): React.JSX.Element {
 
       {isOpen && (
         <>
+          <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)} />
           <div
-            className="fixed inset-0 z-50"
-            onClick={() => setIsOpen(false)}
-          />
-          <div className="bg-secundary shadow-md border border-border min-w-60 w-full rounded-lg absolute z-70 top-12">
+            className={`bg-secundary shadow-md border border-border min-w-60 w-full rounded-lg  z-70 ${props.relative ? ' relative top-0.5 ' : ' absolute top-11'}`}
+          >
             {isSearchable && (
-              <div className="p-3 border-b bg-white border-border">
+              <div className="p-3 border-b bg-white rounded-md border-border">
                 <input
                   type="text"
                   placeholder="Pesquisar..."

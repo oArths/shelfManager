@@ -4,6 +4,7 @@ export interface DropdownBaseProps {
   filterKey: string
   onOptionSelect: (option: string, filterKey: string) => void
   placeholder?: string
+  relative?: boolean
 }
 
 export interface SingleDropdownProps extends DropdownBaseProps {
