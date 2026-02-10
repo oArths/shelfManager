@@ -1,16 +1,28 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import logo from '../../assets/logo.png';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function Header() {
   const { logout } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+   const from = location.state?.from?.pathname || '/';
 
+   const handlerBakcLoacais = () => {
+     navigate(from + 'locais', { replace: true });
+   }
   return (
     <header className=" h-[10%] px-10 flex flex-row items-center justify-between  border-b border-border">
       <div className="flex items-center justify-center w-16 aspect-square ">
         <img src={logo} />
       </div>
       <ul className="flex flex-row items-center justify-between gap-10">
-        <li className="cursor-pointer px-2 py-1 hover:bg-border/30 rounded-md">Locais</li>
+        <li
+          onClick={() => handlerBakcLoacais()}
+          className="cursor-pointer px-2 py-1 hover:bg-border/30 rounded-md"
+        >
+          Locais
+        </li>
         <li className="cursor-pointer px-2 py-1 hover:bg-border/30 rounded-md">Relatorios</li>
       </ul>
       <button

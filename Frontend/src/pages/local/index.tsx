@@ -4,7 +4,7 @@ import Modal from '../../components/modal';
 import logo from '../../assets/logo.png';
 import locais from '../../json/locais.json';
 import TableLocal from '../../components/table/tableLocal';
-import TableHistory from "../../components/table/tableHistory";
+import TableHistory from '../../components/table/tableHistory';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 
 export default function Local() {
@@ -12,24 +12,40 @@ export default function Local() {
     'Nome da Prateleira',
     'Sku',
     'Nome do Produto',
-    'sf',
-    'df',
-    'df',
-    'df',
-    'df',
+    'teste01',
+    'teste02',
+    'teste03',
+    'teste04',
+    
   ];
+  const itemName = 'Armário do Fernando';
   const [seacrh, setSearch] = useState('');
-  const [newLocalModal, setNewLocalModal] = useState(true);
-  const [moveLocalModal, setMoveLocalModal] = useState(true);
-  const [removeLocalModal, setRemoveLocalModal] = useState(true);
-  const [historyLocalModal, setHistoryLocalModal] = useState(true);
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [newLocalModal, setNewLocalModal] = useState(false);
+  // const [moveLocalModal, setMoveLocalModal] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [removeLocalModal, setRemoveLocalModal] = useState(false);
+  const [historyLocalModal, setHistoryLocalModal] = useState(false);
   const [optionChart, setOptionChart] = useState(chartOptions[0]);
-
   const HandlerChartOptionSelect = (option: string): void => {
     setOptionChart(option);
   };
-  const itemName = 'Armário do Fernando';
-  const [deleteModal, setDeleteModal] = useState(false);
+
+  const handleMoveNewLocal = () => {
+    setNewLocalModal(true);
+  };
+
+
+  const handleRemove = (item: any) => {
+    setSelectedItem(item);
+    setRemoveLocalModal(true);
+  };
+
+  const handleHistory = (item: any) => {
+    setSelectedItem(item);
+    setHistoryLocalModal(true);
+  };
+
   return (
     <section className="flex flex-col w-full  items-center justify-center  ">
       <div className="flex flex-col gap-5 w-[90%] h-full">
@@ -47,9 +63,14 @@ export default function Local() {
             Adicionar Produto
           </button>
         </fieldset>
-        <TableLocal data={locais[0]} />
+        <TableLocal
+          data={locais[0]}
+          onMove={handleMoveNewLocal}
+          onRemove={handleRemove}
+          onHistory={handleHistory}
+        />
       </div>
-      {removeLocalModal && (
+      {removeLocalModal && selectedItem && (
         <Modal
           onClose={() => setRemoveLocalModal(false)}
           Children={
@@ -59,7 +80,7 @@ export default function Local() {
               </div>
               <h2 className="font-medium text-2xl text-black  text-justify w-full flex flex-col items-center">
                 <p>Deseja realmente excluir</p>
-                <p className="text-pink200 truncate">{itemName}</p>
+                <p className="text-pink200 truncate">{selectedItem.name}</p>
               </h2>
 
               <div className="w-full flex flex-row gap-5">
@@ -77,7 +98,7 @@ export default function Local() {
           }
         />
       )}
-      {historyLocalModal && (
+      {historyLocalModal && selectedItem && (
         <Modal
           onClose={() => setHistoryLocalModal(false)}
           isFull={true}
@@ -113,33 +134,6 @@ export default function Local() {
                   onOptionSelect={HandlerChartOptionSelect}
                 />
               </div>
-              <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
-                >
-                  Confirmar
-                </button>
-              </div>
-            </div>
-          }
-        />
-      )}
-      {moveLocalModal && (
-        <Modal
-          onClose={() => setMoveLocalModal(false)}
-          Children={
-            <div className="flex flex-col gap-5 lg:w-100  items-center">
-              <div className=" rounded-full p-3 bg-blue200/10 w-fit">
-                <I.Archive className="stroke-blue200" size={53} />
-              </div>
-              <h2 className="font-medium text-2xl text-black  text-justify w-full flex flex-col items-center">
-                <p>Deseja realmente excluir</p>
-                <p className="text-blue200 truncate">{itemName}</p>
-              </h2>
               <div className="w-full flex flex-row gap-5">
                 <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
                   Cancelar

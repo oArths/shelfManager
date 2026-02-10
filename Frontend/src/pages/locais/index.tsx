@@ -12,12 +12,19 @@ export default function Locais() {
   const [optionChart, setOptionChart] = useState(chartOptions[0]);
   const [editModal, setEditModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
-  const [newLocalModal, setNewLocalModal] = useState(true);
+  const [newLocalModal, setNewLocalModal] = useState(false);
   const [newLocalName, setNewLocalName] = useState('');
 
   const itemName = 'Armário do Fernando';
   const HandlerChartOptionSelect = (option: string): void => {
     setOptionChart(option);
+  };
+  const handleEditModal = () => {
+    setEditModal(true);
+  };
+
+  const handleDeleteModal = () => {
+    setDeleteModal(true);
   };
   return (
     <section className="flex flex-col  w-full items-center justify-center  pb-10">
@@ -50,7 +57,7 @@ export default function Locais() {
             </button>
           </div>
         </fieldset>
-        <TableLocais data={locais} />
+        <TableLocais data={locais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
       </div>
       {editModal && (
         <Modal

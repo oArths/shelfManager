@@ -1,11 +1,27 @@
 import { useState } from 'react';
 import Pagination from '../pagination';
 import type { Local } from './interface';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-export default function TableLocais({ data }: { data: Local[] }): React.JSX.Element {
+
+export default function TableLocais({
+  data,
+  onEdit,
+  onRemove,
+}: {
+  data: Local[];
+  onEdit: () => void;
+  onRemove: () => void;
+}): React.JSX.Element {
   const [offset, setOffSet] = useState(0);
   const limit = 7;
+  const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from?.pathname || '/';
 
+  const handlerBakcLoacais = () => {
+    navigate(from + 'local', { replace: true });
+  };
   return (
     <div className="flex flex-col items-start  justify-between w-full min-h-96 h-auto  bg-white border-l border-r   border-border">
       <table className="w-full h-auto  ">
@@ -37,17 +53,29 @@ export default function TableLocais({ data }: { data: Local[] }): React.JSX.Elem
           {data &&
             data.slice(offset, offset + limit).map((Item, Index) => {
               return (
-                <tr key={Index} className="tbody-tr ">
+                <tr onClick={() => handlerBakcLoacais()} key={Index} className="tbody-tr ">
                   <td className="tbody-td " scope="row">
                     {Item.nome}
                   </td>
                   <td className="tbody-td  max-lg:hidden">{Item.locais.length}</td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center">
-                      <button className="btn px-4 py-1 text-sm bg-green200/80 text-white">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEdit();
+                        }}
+                        className="btn px-4 py-1 text-sm bg-green200/80 text-white"
+                      >
                         Editar
                       </button>
-                      <button className="btn  px-4 py-1 text-sm bg-pink200/80 text-white">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onRemove();
+                        }}
+                        className="btn  px-4 py-1 text-sm bg-pink200/80 text-white"
+                      >
                         Remover
                       </button>
                     </div>

@@ -4,7 +4,17 @@ import logo from '../../assets/logo.png';
 
 import type { Local } from './interface';
 
-export default function TableLocal({ data }: { data: Local }): React.JSX.Element {
+export default function TableLocal({
+  data,
+  onMove,
+  onRemove,
+  onHistory,
+}: {
+  data: Local;
+  onMove: () => void;
+  onRemove: (item: any) => void;
+  onHistory: (item: any) => void;
+}): React.JSX.Element {
   const [offset, setOffSet] = useState(0);
   const limit = 7;
 
@@ -55,13 +65,22 @@ export default function TableLocal({ data }: { data: Local }): React.JSX.Element
                   <td className="tbody-td max-lg:hidden">{Item.code}</td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center px-5">
-                      <button className="btn px-4 py-1 text-sm bg-blue200/80 text-white">
+                      <button
+                        onClick={() => onMove()}
+                        className="btn px-4 py-1 text-sm bg-blue200/80 text-white"
+                      >
                         Mover
                       </button>
-                      <button className="btn  px-4 py-1 text-sm bg-pink200/80 text-white">
+                      <button
+                        onClick={() => onRemove(Item)}
+                        className="btn  px-4 py-1 text-sm bg-pink200/80 text-white"
+                      >
                         Remover
                       </button>
-                      <button className="btn  px-4 py-1 text-sm bg-yellow200/80 text-white">
+                      <button
+                        onClick={() => onHistory(Item)}
+                        className="btn  px-4 py-1 text-sm bg-yellow200/80 text-white"
+                      >
                         Historico
                       </button>
                     </div>
