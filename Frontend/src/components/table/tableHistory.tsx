@@ -34,11 +34,10 @@ export default function TableHistory({ data }: { data: Local[] }): React.JSX.Ele
               return (
                 <tr key={Index} className="tbody-tr ">
                   <td className="tbody-td " scope="row">
-                    {Item.nome}
+                    {Item.name}
                   </td>
-                  <td className="tbody-td">{Item.locais.length}</td>
-                  <td className="tbody-td">{Item.locais.length}</td>
-          
+
+                  <td className="tbody-td">{Item.item_count}</td>
                 </tr>
               );
             })}

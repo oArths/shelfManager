@@ -12,8 +12,10 @@ export default function Pagination({
   setOffset
 }: IPagination): React.JSX.Element {
   const max_items = 5
-  const current = offset ? offset / limit + 1 : 1
-  const pages = Math.ceil(total / limit)
+  
+  const pages = Math.max(Math.ceil(total / limit), 1);
+  const current = Math.floor(offset / limit) + 1;
+
   let start = Math.max(current - Math.floor(max_items / 2), 1)
   const end = Math.min(start + max_items - 1, pages)
 

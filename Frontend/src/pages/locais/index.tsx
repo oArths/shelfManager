@@ -1,33 +1,132 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as I from 'lucide-react';
 import Modal from '../../components/modal';
-import locais from '../../json/locais.json';
+// import locais from '../../json/locais.json';
 import TableLocais from '../../components/table/tableLocais';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
+import { apiFetch } from '../../services/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Locais() {
   const chartOptions = ['Nome da Prateleira', 'Sku', 'Nome do Produto'];
-  const [seacrh, setSearch] = useState('');
-  const [changeName, setChangeName] = useState('');
+  const [search, setSearch] = useState('');
   const [optionChart, setOptionChart] = useState(chartOptions[0]);
   const [editModal, setEditModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
   const [newLocalModal, setNewLocalModal] = useState(false);
-  const [newLocalName, setNewLocalName] = useState('');
+  const [changeName, setChangeName] = useState<string>('');
+  const [newLocalName, setNewLocalName] = useState<string>('');
 
-  const itemName = 'Armário do Fernando';
-  const HandlerChartOptionSelect = (option: string): void => {
-    setOptionChart(option);
+  const [locais, setLocais] = useState<any[]>([]);
+  const [selectedLocal, setSelectedLocal] = useState<any>(null);
+  const filteredLocais = locais.filter((local) => {
+    if (!search.trim()) return true;
+
+    const value = search.toLowerCase();
+
+    switch (optionChart) {
+      case 'Nome da Prateleira':
+        return local.name?.toLowerCase().includes(value);
+
+      case 'Sku':
+        return local.sku?.toLowerCase().includes(value);
+
+      case 'Nome do Produto':
+        return local.product_name?.toLowerCase().includes(value);
+
+      default:
+        return true;
+    }
+  });
+  const handleDeleteLocal = async () => {
+    try {
+      await apiFetch(`/shelves/${selectedLocal.id}`, {
+        method: 'DELETE',
+      });
+
+      setDeleteModal(false);
+      await loadLocais();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
   };
-  const handleEditModal = () => {
+  const handleUpdateLocal = async () => {
+    try {
+      await apiFetch(`/shelves/${selectedLocal.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: changeName }),
+      });
+
+      setEditModal(false);
+      await loadLocais();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const handleEditModal = (local: any) => {
+    setSelectedLocal(local);
+    setChangeName(local.name ?? '');
     setEditModal(true);
   };
 
-  const handleDeleteModal = () => {
+  useEffect(() => {
+    console.log('recarregou');
+    loadLocais();
+  }, []);
+
+  const loadLocais = async () => {
+    try {
+      const data = await apiFetch('/shelves');
+
+      console.log('RETORNO API:', data);
+      setLocais(data);
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+
+  const itemName = selectedLocal?.nome || '';
+
+  const handleCreateLocal = async () => {
+    if (!newLocalName.trim()) {
+      toast.error('Informe um nome para o local.');
+      return;
+    }
+    try {
+      await apiFetch('/shelves', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: newLocalName,
+          description: null,
+        }),
+      });
+
+      toast.success('Local criado com sucesso!');
+      setNewLocalModal(false);
+      setNewLocalName('');
+      await loadLocais();
+    } catch (error: any) {
+      toast.error(error.message);
+    }
+  };
+  const HandlerChartOptionSelect = (option: string): void => {
+    setOptionChart(option);
+  };
+
+  const handleDeleteModal = (local: any) => {
+    setSelectedLocal(local);
     setDeleteModal(true);
   };
   return (
     <section className="flex flex-col  w-full items-center justify-center  pb-10">
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+        }}
+      />
       <div className="flex flex-col gap-5 w-[90%] h-full">
         <h1 className="text-4xl font-medium text-black200 pt-5 ">Locais</h1>
         <fieldset className=" w-full flex flex-col lg:flex-row items-end gap-5">
@@ -57,7 +156,7 @@ export default function Locais() {
             </button>
           </div>
         </fieldset>
-        <TableLocais data={locais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
+        <TableLocais data={filteredLocais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
       </div>
       {editModal && (
         <Modal
@@ -70,7 +169,7 @@ export default function Locais() {
                 <input
                   className="input px-4 "
                   type="text"
-                  value={changeName}
+                  value={changeName ?? ''}
                   onChange={(e) => setChangeName(e.target.value)}
                   placeholder="Altere o nome"
                 />
@@ -81,6 +180,7 @@ export default function Locais() {
                 </button>
                 <button
                   type="button"
+                  onClick={handleUpdateLocal}
                   className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
@@ -101,7 +201,7 @@ export default function Locais() {
                 <input
                   className="input px-4 "
                   type="text"
-                  value={newLocalName}
+                  value={newLocalName ?? ''}
                   onChange={(e) => setNewLocalName(e.target.value)}
                   placeholder="Defina um nome"
                 />
@@ -112,6 +212,7 @@ export default function Locais() {
                 </button>
                 <button
                   type="button"
+                  onClick={handleCreateLocal}
                   className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
@@ -140,6 +241,7 @@ export default function Locais() {
                 </button>
                 <button
                   type="button"
+                  onClick={handleDeleteLocal}
                   className="btn w-1/2 bg-pink200 text-white  px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir

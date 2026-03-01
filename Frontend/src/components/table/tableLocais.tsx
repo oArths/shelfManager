@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Pagination from '../pagination';
 import type { Local } from './interface';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -10,17 +10,21 @@ export default function TableLocais({
   onRemove,
 }: {
   data: Local[];
-  onEdit: () => void;
-  onRemove: () => void;
+  onEdit: (local: any) => void;
+  onRemove: (local: any) => void;
 }): React.JSX.Element {
   const [offset, setOffSet] = useState(0);
   const limit = 7;
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/';
-
-  const handlerBakcLoacais = () => {
-    navigate(from + 'local', { replace: true });
+  useEffect(() => {
+    if (offset >= data.length && offset !== 0) {
+      setOffSet(Math.max(data.length - limit, 0));
+    }
+  }, [data.length, offset, limit]);
+  const handlerBakcLoacais = (id: number) => {
+    navigate(`/local/${id}`);
   };
   return (
     <div className="flex flex-col items-start  justify-between w-full min-h-96 h-auto  bg-white border-l border-r   border-border">
@@ -39,7 +43,7 @@ export default function TableLocais({
           </tr>
         </thead>
         <tbody>
-          {data.length < 1 && (
+          {!data.length && (
             <tr className="w-full h-80 bg-white border border-y  border-x-0 border-border cursor-pointer">
               <td
                 colSpan={3}
@@ -51,19 +55,19 @@ export default function TableLocais({
           )}
 
           {data &&
-            data.slice(offset, offset + limit).map((Item, Index) => {
+            data.slice(offset, offset + limit).map((Item) => {
               return (
-                <tr onClick={() => handlerBakcLoacais()} key={Index} className="tbody-tr ">
+                <tr onClick={() => handlerBakcLoacais(Item.id)} key={Item.id} className="tbody-tr ">
                   <td className="tbody-td " scope="row">
-                    {Item.nome}
+                    {Item.name}
                   </td>
-                  <td className="tbody-td  max-lg:hidden">{Item.locais.length}</td>
+                  <td className="tbody-td  max-lg:hidden">{Item.item_count}</td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onEdit();
+                          onEdit(Item);
                         }}
                         className="btn px-4 py-1 text-sm bg-green200/80 text-white"
                       >
@@ -72,7 +76,7 @@ export default function TableLocais({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          onRemove();
+                          onRemove(Item);
                         }}
                         className="btn  px-4 py-1 text-sm bg-pink200/80 text-white"
                       >

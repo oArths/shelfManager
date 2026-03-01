@@ -2,20 +2,19 @@ import { useState } from 'react';
 import logo from '../../assets/logo.png';
 import toast, { Toaster } from 'react-hot-toast';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function Login() {
-  const handleLogin = (): void => {};
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const location = useLocation();
+  // const location = useLocation();
   const { login } = useAuth();
 
-  const from = location.state?.from?.pathname || '/';
+  // const from = location.state?.from?.pathname || '/';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +25,7 @@ export default function Login() {
 
       if (success) {
         toast.success('Login Efetuado!!');
-        navigate(from + 'local', { replace: true });
+        navigate('/locais', { replace: true });
       } else {
         toast.error('Erro ao fazer login. Tente novamente. !');
       }
@@ -78,7 +77,6 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading || !username || !password}
-            onClick={handleLogin}
             className="btn bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
           >
             {loading ? 'Entrando...' : 'Entrar'}

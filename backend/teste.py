@@ -1,15 +1,16 @@
-from pytz import InvalidTimeError
+import jwt
 import bcrypt
 import sqlite3
 import httpx
 from pathlib import Path
+from jwt import PyJWTError
 from datetime import datetime
+from pytz import InvalidTimeError
 from typing import Optional, List
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
-import jwt
-from jwt import PyJWTError
 
 app = FastAPI(title="Shelf Manager API", version="1.0.0")
 DB_PATH = "./db/database.db"
@@ -19,6 +20,15 @@ WORDPRESS_API_KEY = "SHELF_MANAGER_2024"  # A mesma do WordPress
 SECRET_KEY = "SHELF_MANAGER_2024"
 ALGORITHM = "HS256"
 security = HTTPBearer()
+
+# ==================== CORS ====================
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # ==================== MODELS ====================
 
@@ -727,9 +737,9 @@ async def get_shelf_items(
             product_info = await get_wordpress_product(item["product_id"])
             if product_info:
                 product_data = ProductReference(
-                    id=product_info.get("id"),
-                    name=product_info.get("name"),
-                    sku=product_info.get("sku"),
+                    id=product_info.get("id", 0),
+                    name=product_info.get("name", ""),
+                    sku=product_info.get("sku", ""),
                     price=product_info.get("price", 0),
                     stock=product_info.get("stock"),
                     main_image=product_info.get("main_image"),
@@ -845,6 +855,7 @@ async def search_products_in_wordpress(
 
     for product in products:
         product_id = product.get("id")
+        product["main_image"] = product.get("main_image")
         cur.execute(
             """
             SELECT si.shelf_id, s.name as shelf_name

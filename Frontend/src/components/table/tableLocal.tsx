@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import Pagination from '../pagination';
-import logo from '../../assets/logo.png';
 
-import type { Local } from './interface';
+import type {  Item } from './interface';
 
 export default function TableLocal({
   data,
@@ -10,7 +9,7 @@ export default function TableLocal({
   onRemove,
   onHistory,
 }: {
-  data: Local;
+  data: Item[];
   onMove: () => void;
   onRemove: (item: any) => void;
   onHistory: (item: any) => void;
@@ -30,7 +29,7 @@ export default function TableLocal({
               Nome
             </td>
             <td className="thead-td max-lg:hidden" scope="col">
-              Codigo
+              SKU
             </td>
             <td className="thead-td " scope="col">
               Ações
@@ -38,7 +37,7 @@ export default function TableLocal({
           </tr>
         </thead>
         <tbody>
-          {data.locais.length < 1 && (
+          {!data && (
             <tr className="w-full h-80 bg-white border border-y  border-x-0 border-border cursor-pointer">
               <td
                 colSpan={3}
@@ -50,19 +49,19 @@ export default function TableLocal({
           )}
 
           {data &&
-            data.locais.slice(offset, offset + limit).map((Item, Index) => {
+            data.slice(offset, offset + limit).map((Item, Index) => {
               return (
                 <tr key={Index} className="tbody-tr ">
                   <td className="tbody-td max-lg:hidden " scope="row">
                     <div className="w-full h-full flex items-center justify-center">
                       <figure className=" bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
-                        <img src={logo} className="aspect-square" />
+                        <img src={Item.main_image} className="aspect-square" />
                       </figure>
                     </div>
-                    {/* {Item.image} */}
+                    {/* {} */}
                   </td>
-                  <td className="tbody-td">{Item.name}</td>
-                  <td className="tbody-td max-lg:hidden">{Item.code}</td>
+                  <td className="tbody-td">{Item.product_name}</td>
+                  <td className="tbody-td max-lg:hidden">{Item.product_sku}</td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                       <button
@@ -90,7 +89,7 @@ export default function TableLocal({
             })}
         </tbody>
       </table>
-      <Pagination limit={limit} offset={offset} setOffset={setOffSet} total={data.locais.length} />
+      <Pagination limit={limit} offset={offset} setOffset={setOffSet} total={data.length} />
     </div>
   );
 }

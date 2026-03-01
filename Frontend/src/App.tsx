@@ -23,7 +23,7 @@ export default function App(): React.JSX.Element {
           }
         />
         <Route
-          path="/local"
+          path="/local/:id"
           element={
             <PrivateRoute>
               <Header />
