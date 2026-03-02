@@ -2,13 +2,14 @@ import jwt
 import bcrypt
 import sqlite3
 import httpx
+from typing import TypedDict, Optional
 from pathlib import Path
 from jwt import PyJWTError
 from datetime import datetime
 from pytz import InvalidTimeError
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, Query, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 
@@ -80,9 +81,7 @@ class ProductReference(BaseModel):
 
 
 class ShelfItemAdd(BaseModel):
-    product_id: int  # Referência ao produto no WordPress
-    product_name: str  # Nome para exibição
-    product_sku: Optional[str]  # SKU para referência
+    product_id: int
     quantity: int = 1
 
 
@@ -90,17 +89,24 @@ class ShelfItemResponse(BaseModel):
     id: int
     shelf_id: int
     product_id: int
-    product_name: str
-    product_sku: Optional[str]
     quantity: int
     added_at: str
-    # Dados do produto (buscar do WordPress se necessário)
     product_data: Optional[ProductReference] = None
 
 
 class ShelfItemMove(BaseModel):
     product_id: int
     to_shelf_id: int
+
+class WordpressProduct(TypedDict):
+    id: int
+    name: str
+    sku: Optional[str]
+    price: float
+    stock: Optional[int]
+    main_image: Optional[str]
+    product_url: Optional[str]
+
 # ==================== FUNÇÕES DE BANCO E AUTENTICAÇÃO ====================
 
 
@@ -424,8 +430,6 @@ def move_item(move: ShelfItemMove, current_user: dict = Depends(get_current_user
         id=item_data["id"],
         shelf_id=item_data["shelf_id"],
         product_id=item_data["product_id"],
-        product_name=item_data["product_name"],
-        product_sku=item_data["product_sku"],
         quantity=item_data["quantity"],
         added_at=item_data["added_at"],
     )
@@ -484,7 +488,6 @@ async def check_product_status(
     cur.execute(
         """
         SELECT si.shelf_id, s.name as shelf_name,
-               si.product_name, si.product_sku
         FROM shelf_items si
         JOIN shelves s ON si.shelf_id = s.id
         WHERE si.product_id = ?
@@ -507,7 +510,6 @@ async def check_product_status(
         "success": True,
         "product_id": product_id,
         "in_shelf": shelf_info["shelf_id"] if shelf_info else None,
-        "shelf_name": shelf_info["shelf_name"] if shelf_info else None,
         "product_exists_in_wp": product_data is not None,
         "product_data": product_data,
     }
@@ -579,6 +581,7 @@ def startup_event():
     print("🌐 API rodando em: http://localhost:8000")
     print("📚 Documentação: http://localhost:8000/docs")
 
+
 # ==================== CONEXÕES ====================
 
 
@@ -588,7 +591,7 @@ def get_db():
     return conn
 
 
-async def get_wordpress_product(product_id: int) -> Optional[dict]:
+async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
     """Busca dados do produto no WordPress"""
     async with httpx.AsyncClient(verify=False) as client:
         try:
@@ -596,7 +599,6 @@ async def get_wordpress_product(product_id: int) -> Optional[dict]:
                 f"{WORDPRESS_API_URL}/by-id/{product_id}",
                 headers={"X-API-Key": WORDPRESS_API_KEY},
                 timeout=10.0,
-              
             )
 
             if response.status_code == 200:
@@ -608,29 +610,52 @@ async def get_wordpress_product(product_id: int) -> Optional[dict]:
 
     return None
 
+
 # TODO: TERMINAR DE TESTAR AS CONECÇÕES E CONECTAR COM O FRONTEND
-async def search_wordpress_products(search: str, limit: int = 20) -> List[dict]:
-    """Busca produtos no WordPress"""
+async def search_wordpress_products(
+    search: str, search_type: str = "name", limit: int = 20
+) -> List[dict]:
+    """Busca produtos no WordPress
+    Args:
+        search: termo de busca
+        search_type: "name" para busca por nome, "sku" para busca por SKU
+        limit: limite de resultados
+    """
     async with httpx.AsyncClient(verify=False) as client:
         try:
+            # Define o endpoint baseado no tipo de busca
+            if search_type == "sku":
+                endpoint = f"{WORDPRESS_API_URL}/sku-search"
+                params = {"sku": search}
+            else:  # name
+                endpoint = f"{WORDPRESS_API_URL}/search"
+                params = {"q": search, "limit": limit}
+
+            print(f"Buscando no WordPress - Endpoint: {endpoint}, Params: {params}")
+
             response = await client.get(
-                f"{WORDPRESS_API_URL}/search",
-                params={"q": search, "limit": limit},
+                endpoint,
+                params=params,
                 headers={"X-API-Key": WORDPRESS_API_KEY},
                 timeout=10.0,
-           
             )
 
             if response.status_code == 200:
                 data = response.json()
+                print(f"Resposta do WordPress: {data}")
+
                 if data.get("success"):
                     return data.get("data", [])
+            else:
+                print(f"Erro na resposta: {response.status_code} - {response.text}")
+
         except Exception as e:
             print(f"Erro na busca de produtos: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     return []
-
-
 # ==================== ENDPOINTS DE PRATELEIRAS ====================
 
 
@@ -705,7 +730,50 @@ def create_shelf(shelf: ShelfCreate, current_user: dict = Depends(get_current_us
 @app.get("/shelves/{shelf_id}/items", response_model=List[ShelfItemResponse])
 async def get_shelf_items(
     shelf_id: int,
-    include_product_data: bool = False,
+    include_product_data: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM shelf_items
+        WHERE shelf_id = ?
+        ORDER BY added_at DESC
+        """,
+        (shelf_id,),
+    )
+
+    rows = cur.fetchall()
+    conn.close()
+
+    items = []
+
+    for row in rows:
+        item = dict(row)
+
+        product_data = None
+        if include_product_data:
+            product_info = await get_wordpress_product(item["product_id"])
+            if product_info:
+                product_data = ProductReference(**product_info)
+
+        items.append(
+            ShelfItemResponse(
+                **item,
+                product_data=product_data,
+            )
+        )
+
+    return items
+
+
+@app.post("/shelves/{shelf_id}/items", response_model=ShelfItemResponse)
+async def add_item_to_shelf(
+    shelf_id: int,
+    item: ShelfItemAdd,
     current_user: dict = Depends(get_current_user),
 ):
     conn = get_db()
@@ -717,103 +785,33 @@ async def get_shelf_items(
         conn.close()
         raise HTTPException(status_code=404, detail="Prateleira não encontrada")
 
+    # Verifica se produto já está em outra prateleira
     cur.execute(
-        """
-        SELECT *
-        FROM shelf_items
-        WHERE shelf_id = ?
-        ORDER BY added_at DESC
-    """,
-        (shelf_id,),
-    )
-
-    items = []
-    for row in cur.fetchall():
-        item = dict(row)
-
-        # Buscar dados do produto se solicitado
-        product_data = None
-        if include_product_data:
-            product_info = await get_wordpress_product(item["product_id"])
-            if product_info:
-                product_data = ProductReference(
-                    id=product_info.get("id", 0),
-                    name=product_info.get("name", ""),
-                    sku=product_info.get("sku", ""),
-                    price=product_info.get("price", 0),
-                    stock=product_info.get("stock"),
-                    main_image=product_info.get("main_image"),
-                    product_url=product_info.get("product_url"),
-                )
-
-        items.append(
-            ShelfItemResponse(
-                id=item["id"],
-                shelf_id=item["shelf_id"],
-                product_id=item["product_id"],
-                product_name=item["product_name"],
-                product_sku=item["product_sku"],
-                quantity=item["quantity"],
-                added_at=item["added_at"],
-                product_data=product_data,
-            )
-        )
-
-    conn.close()
-    return items
-
-
-@app.post("/shelves/{shelf_id}/items", response_model=ShelfItemResponse)
-async def add_item_to_shelf(
-    shelf_id: int, item: ShelfItemAdd, current_user: dict = Depends(get_current_user)
-):
-    conn = get_db()
-    cur = conn.cursor()
-
-    # Verifica se prateleira existe
-    cur.execute("SELECT id FROM shelves WHERE id = ?", (shelf_id,))
-    if not cur.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
-
-    # 🔥 REGRA DE NEGÓCIO: Verifica se produto já está em alguma prateleira
-    cur.execute(
-        """
-        SELECT si.id, si.shelf_id, s.name 
-        FROM shelf_items si
-        JOIN shelves s ON si.shelf_id = s.id
-        WHERE si.product_id = ?
-    """,
+        "SELECT shelf_id FROM shelf_items WHERE product_id = ?",
         (item.product_id,),
     )
-
-    existing_item = cur.fetchone()
-
-    if existing_item:
+    if cur.fetchone():
         conn.close()
         raise HTTPException(
             status_code=409,
-            detail=f"Produto já está na prateleira '{existing_item['name']}'",
-            headers={"X-Current-Shelf": str(existing_item["shelf_id"])},
+            detail="Produto já está em uma prateleira",
         )
 
-    # Verifica se produto existe no WordPress (opcional)
+    # 🔥 (Opcional) Validar se produto existe no WP
     product_info = await get_wordpress_product(item.product_id)
     if not product_info:
-        # Pode optar por não verificar, apenas armazenar a referência
-        pass
+        conn.close()
+        raise HTTPException(status_code=404, detail="Produto não existe no WordPress")
 
-    # Adiciona item à prateleira
+    # Inserir apenas referência
     cur.execute(
         """
-        INSERT INTO shelf_items (shelf_id, product_id, product_name, product_sku, quantity, added_by)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """,
+        INSERT INTO shelf_items (shelf_id, product_id, quantity, added_by)
+        VALUES (?, ?, ?, ?)
+        """,
         (
             shelf_id,
             item.product_id,
-            item.product_name,
-            item.product_sku,
             item.quantity,
             current_user["id"],
         ),
@@ -822,59 +820,79 @@ async def add_item_to_shelf(
     item_id = cur.lastrowid
     conn.commit()
 
-    # Retorna item adicionado
     cur.execute("SELECT * FROM shelf_items WHERE id = ?", (item_id,))
     item_data = dict(cur.fetchone())
     conn.close()
 
-    return ShelfItemResponse(
-        id=item_data["id"],
-        shelf_id=item_data["shelf_id"],
-        product_id=item_data["product_id"],
-        product_name=item_data["product_name"],
-        product_sku=item_data["product_sku"],
-        quantity=item_data["quantity"],
-        added_at=item_data["added_at"],
-    )
+    return ShelfItemResponse(**item_data)
 
 
 # ==================== ENDPOINT DE BUSCA ====================
 
-
 @app.get("/products/search")
-async def search_products_in_wordpress(
-    q: str, limit: int = 20, current_user: dict = Depends(get_current_user)
+async def search_products(
+    request: Request,
+    q: str = Query(..., description="Termo de busca"),
+    type: str = Query("name", description="Tipo de busca: 'name' ou 'sku'"),
+    limit: int = Query(20, description="Limite de resultados"),
 ):
-    """Busca produtos no WordPress (proxy)"""
-    products = await search_wordpress_products(q, limit)
-    print(f"Busca por '{q}' retornou {len(products)} produtos do WordPress")
+    """Busca produtos no WordPress por nome ou SKU"""
+    try:
+        # Log da requisição
+        print(f"Buscando produtos - Termo: {q}, Tipo: {type}, Limite: {limit}")
 
-    # Verificar quais produtos já estão em prateleiras
-    conn = get_db()
-    cur = conn.cursor()
-
-    for product in products:
-        product_id = product.get("id")
-        product["main_image"] = product.get("main_image")
-        cur.execute(
-            """
-            SELECT si.shelf_id, s.name as shelf_name
-            FROM shelf_items si
-            JOIN shelves s ON si.shelf_id = s.id
-            WHERE si.product_id = ?
-        """,
-            (product_id,),
+        # Busca no WordPress
+        products = await search_wordpress_products(
+            search=q, search_type=type, limit=limit
         )
 
-        shelf_info = cur.fetchone()
-        if shelf_info:
-            product["in_shelf"] = shelf_info["shelf_id"]
-            product["shelf_name"] = shelf_info["shelf_name"]
-        else:
-            product["in_shelf"] = None
-            product["shelf_name"] = None
+        return {
+            "success": True,
+            "data": products,
+            "count": len(products),
+            "search_type": type,
+        }
 
-    conn.close()
+    except Exception as e:
+        print(f"Erro na busca de produtos: {e}")
+        import traceback
 
-    return {"success": True, "search": q, "count": len(products), "data": products}
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "data": []}
+    
+# @app.get("/products/search")
+# async def search_products_in_wordpress(
+#     q: str, limit: int = 20, current_user: dict = Depends(get_current_user)
+# ):
+#     """Busca produtos no WordPress (proxy)"""
+#     products = await search_wordpress_products(q, limit)
+#     print(f"Busca por '{q}' retornou {len(products)} produtos do WordPress")
 
+#     # Verificar quais produtos já estão em prateleiras
+#     conn = get_db()
+#     cur = conn.cursor()
+
+#     for product in products:
+#         product_id = product.get("id")
+#         product["main_image"] = product.get("main_image")
+#         cur.execute(
+#             """
+#             SELECT si.shelf_id, s.name as shelf_name
+#             FROM shelf_items si
+#             JOIN shelves s ON si.shelf_id = s.id
+#             WHERE si.product_id = ?
+#         """,
+#             (product_id,),
+#         )
+
+#         shelf_info = cur.fetchone()
+#         if shelf_info:
+#             product["in_shelf"] = shelf_info["shelf_id"]
+#             product["shelf_name"] = shelf_info["shelf_name"]
+#         else:
+#             product["in_shelf"] = None
+#             product["shelf_name"] = None
+
+#     conn.close()
+
+#     return {"success": True, "search": q, "count": len(products), "data": products}

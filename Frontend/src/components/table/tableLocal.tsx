@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Pagination from '../pagination';
 
-import type {  Item } from './interface';
+import type { Item } from './interface';
 
 export default function TableLocal({
   data,
@@ -28,8 +28,11 @@ export default function TableLocal({
             <td className="thead-td" scope="col">
               Nome
             </td>
-            <td className="thead-td max-lg:hidden" scope="col">
+            <td className="thead-td max-xl:hidden" scope="col">
               SKU
+            </td>
+            <td className="thead-td max-xl:hidden" scope="col">
+              Quantidade
             </td>
             <td className="thead-td " scope="col">
               Ações
@@ -37,7 +40,7 @@ export default function TableLocal({
           </tr>
         </thead>
         <tbody>
-          {!data && (
+          {!data || data.length === 0 ? (
             <tr className="w-full h-80 bg-white border border-y  border-x-0 border-border cursor-pointer">
               <td
                 colSpan={3}
@@ -46,22 +49,38 @@ export default function TableLocal({
                 item não encontrado...
               </td>
             </tr>
-          )}
-
-          {data &&
-            data.slice(offset, offset + limit).map((Item, Index) => {
+          ) : (
+            data &&
+            data.slice(offset, offset + limit).map((item, index) => {
+              const productData = item.product_data || {};
+              const mainImage = productData.image || productData.main_image || '';
               return (
-                <tr key={Index} className="tbody-tr ">
-                  <td className="tbody-td max-lg:hidden " scope="row">
+                <tr key={item.id || index} className="tbody-tr ">
+                  <td className="tbody-td max-xl:hidden " scope="row">
                     <div className="w-full h-full flex items-center justify-center">
                       <figure className=" bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
-                        <img src={Item.main_image} className="aspect-square" />
+                        {mainImage ? (
+                          <img
+                            src={mainImage}
+                            alt={productData.name || 'Produto'}
+                            className="aspect-square object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-gray-200 rounded-md flex items-center justify-center">
+                            <span className="text-xs text-gray-400">Sem img</span>
+                          </div>
+                        )}
                       </figure>
                     </div>
-                    {/* {} */}
                   </td>
-                  <td className="tbody-td">{Item.product_name}</td>
-                  <td className="tbody-td max-lg:hidden">{Item.product_sku}</td>
+                  <td className="tbody-td">{productData.name || 'Nome não disponível'}</td>
+                  <td className="tbody-td max-lg:hidden">
+                    {productData.sku || 'SKU não disponível'}
+                  </td>
+                  <td className="tbody-td max-xl:hidden">
+                    {item.quantity || 1}
+                    {productData.sku || 'SKU não disponível'}
+                  </td>
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                       <button
@@ -71,13 +90,13 @@ export default function TableLocal({
                         Mover
                       </button>
                       <button
-                        onClick={() => onRemove(Item)}
+                        onClick={() => onRemove(item)}
                         className="btn  px-4 py-1 text-sm bg-pink200/80 text-white"
                       >
                         Remover
                       </button>
                       <button
-                        onClick={() => onHistory(Item)}
+                        onClick={() => onHistory(item)}
                         className="btn  px-4 py-1 text-sm bg-yellow200/80 text-white"
                       >
                         Historico
@@ -86,10 +105,13 @@ export default function TableLocal({
                   </td>
                 </tr>
               );
-            })}
+            })
+          )}
         </tbody>
       </table>
-      <Pagination limit={limit} offset={offset} setOffset={setOffSet} total={data.length} />
+      {data && data.length > 0 && (
+        <Pagination limit={limit} offset={offset} setOffset={setOffSet} total={data.length} />
+      )}
     </div>
   );
 }

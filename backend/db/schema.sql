@@ -22,14 +22,12 @@ CREATE TABLE IF NOT EXISTS shelves (
 CREATE TABLE IF NOT EXISTS shelf_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     shelf_id INTEGER NOT NULL,
-    product_id INTEGER NOT NULL,  -- Referência ao ID do produto no WordPress
-    product_name TEXT NOT NULL,   -- Nome do produto (cópia para performance)
-    product_sku TEXT,             -- SKU do produto (cópia para referência)
+    product_id INTEGER NOT NULL,
     quantity INTEGER DEFAULT 1,
     added_by INTEGER,
     added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(product_id),  -- REGRA: Um produto só pode estar em UMA prateleira
+    UNIQUE(product_id),
     FOREIGN KEY (shelf_id) REFERENCES shelves(id) ON DELETE CASCADE,
     FOREIGN KEY (added_by) REFERENCES users(id)
 );
