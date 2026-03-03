@@ -7,6 +7,7 @@ import TableHistory from '../../components/table/tableHistory';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
+
 export default function Local() {
   const chartOptions = ['Nome do Produto', 'Sku'];
   const itemName = 'Armário do Fernando';
@@ -35,6 +36,18 @@ export default function Local() {
       console.error(error);
     }
   };
+
+  // Função para carregar detalhes da prateleira (nome)
+  const loadShelfDetails = async () => {
+    if (!id) return;
+    try {
+      const data = await apiFetch(`/shelves/${id}`);
+      setLocalName(data.name);
+    } catch (error) {
+      console.error('Erro ao carregar nome da prateleira:', error);
+    }
+  };
+
   useEffect(() => {
     if (seacrh.length < 2) {
       setSearchResults([]);
@@ -66,11 +79,14 @@ export default function Local() {
       setLoadingSearch(false);
     }
   };
+
   useEffect(() => {
     if (!id) return;
 
-    loadItems();
+    loadShelfDetails(); // Carrega o nome da prateleira
+    loadItems();        // Carrega os itens
   }, [id]);
+
   const loadItems = async () => {
     try {
       const data = await apiFetch(`/shelves/${id}/items`);
@@ -83,10 +99,12 @@ export default function Local() {
   const HandlerChartOptionSelect = (option: string): void => {
     setOptionChart(option);
   };
+
   const handleShelfSelect = (option: string) => {
     const shelf = allShelves.find((s) => s.name === option);
     if (shelf) setSelectedShelfMove(shelf.id);
   };
+
   const confirmMove = async () => {
     if (!selectedItem || !selectedShelfMove) return;
 
@@ -105,6 +123,7 @@ export default function Local() {
       console.error(error);
     }
   };
+
   const handleMoveNewLocal = (item: any) => {
     setSelectedItem(item);
     loadShelves();
@@ -125,6 +144,7 @@ export default function Local() {
       console.error(error);
     }
   };
+
   const handleRemove = (item: any) => {
     setSelectedItem(item);
     setRemoveLocalModal(true);
@@ -165,10 +185,14 @@ export default function Local() {
       console.error(error);
     }
   };
+
   return (
     <section className="flex flex-col w-full  items-center justify-center  ">
       <div className="flex flex-col gap-5 w-[90%] h-full">
-        <h1 className="text-4xl font-medium text-black200 pt-5 ">{localName}</h1>
+        <h1 className="text-3xl font-semibold text-black200 pt-10 pb-0">
+          {localName}
+        </h1>
+
         <fieldset className=" w-full flex flex-col lg:flex-row items-end gap-5">
           <div className="relative w-full">
             <div className="  flex items-center w-full   relative">

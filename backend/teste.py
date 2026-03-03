@@ -487,7 +487,7 @@ async def check_product_status(
     # Verifica se está em alguma prateleira
     cur.execute(
         """
-        SELECT si.shelf_id, s.name as shelf_name,
+        SELECT si.shelf_id, s.name as shelf_name
         FROM shelf_items si
         JOIN shelves s ON si.shelf_id = s.id
         WHERE si.product_id = ?
@@ -656,6 +656,7 @@ async def search_wordpress_products(
             traceback.print_exc()
 
     return []
+
 # ==================== ENDPOINTS DE PRATELEIRAS ====================
 
 
@@ -682,6 +683,30 @@ def get_shelves(current_user: dict = Depends(get_current_user)):
     conn.close()
     return shelves
 
+# NOVO ENDPOINT: Buscar prateleira por ID
+@app.get("/shelves/{shelf_id}", response_model=ShelfResponse)
+def get_shelf(shelf_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+    
+    cur.execute("""
+        SELECT s.*, 
+               COUNT(si.id) as item_count,
+               u.username as created_by_name
+        FROM shelves s
+        LEFT JOIN shelf_items si ON s.id = si.shelf_id
+        LEFT JOIN users u ON s.created_by = u.id
+        WHERE s.id = ?
+        GROUP BY s.id
+    """, (shelf_id,))
+    
+    shelf = cur.fetchone()
+    conn.close()
+    
+    if not shelf:
+        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
+    
+    return dict(shelf)
 
 @app.post("/shelves", response_model=ShelfResponse)
 def create_shelf(shelf: ShelfCreate, current_user: dict = Depends(get_current_user)):
