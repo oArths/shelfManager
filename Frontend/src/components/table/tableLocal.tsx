@@ -10,7 +10,7 @@ export default function TableLocal({
   onHistory,
 }: {
   data: Item[];
-  onMove: () => void;
+  onMove: (item: any) => void;
   onRemove: (item: any) => void;
   onHistory: (item: any) => void;
 }): React.JSX.Element {
@@ -84,7 +84,7 @@ export default function TableLocal({
                   <td className="tbody-td">
                     <div className="h-auto flex  gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                       <button
-                        onClick={() => onMove()}
+                        onClick={() => onMove(item)}
                         className="btn px-4 py-1 text-sm bg-blue200/80 text-white"
                       >
                         Mover
