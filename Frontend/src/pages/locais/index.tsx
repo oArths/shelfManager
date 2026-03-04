@@ -46,6 +46,7 @@ export default function Locais() {
 
       setDeleteModal(false);
       await loadLocais();
+      toast.success('Local excluído com sucesso!');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -59,6 +60,7 @@ export default function Locais() {
 
       setEditModal(false);
       await loadLocais();
+      toast.success('Local atualizado com sucesso!');
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -86,7 +88,8 @@ export default function Locais() {
     }
   };
 
-  const itemName = selectedLocal?.nome || '';
+  // Corrigido: usar 'name' em vez de 'nome'
+  const itemName = selectedLocal?.name || '';
 
   const handleCreateLocal = async () => {
     if (!newLocalName.trim()) {
@@ -175,7 +178,10 @@ export default function Locais() {
                 />
               </div>
               <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
+                <button
+                  onClick={() => setEditModal(false)}
+                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                >
                   Cancelar
                 </button>
                 <button
@@ -207,7 +213,10 @@ export default function Locais() {
                 />
               </div>
               <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
+                <button
+                  onClick={() => setNewLocalModal(false)}
+                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                >
                   Cancelar
                 </button>
                 <button
@@ -236,7 +245,10 @@ export default function Locais() {
               </h2>
 
               <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
+                <button
+                  onClick={() => setDeleteModal(false)}
+                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                >
                   Cancelar
                 </button>
                 <button

@@ -10,12 +10,10 @@ import { apiFetch } from '../../services/api';
 
 export default function Local() {
   const chartOptions = ['Nome do Produto', 'Sku'];
-  const itemName = 'Armário do Fernando';
   const { id } = useParams();
   const [seacrh, setSearch] = useState('');
   const [items, setItems] = useState<any[]>([]);
   const [localName, setLocalName] = useState('');
-  const [deleteModal, setDeleteModal] = useState(false);
   const [newLocalModal, setNewLocalModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [removeLocalModal, setRemoveLocalModal] = useState(false);
@@ -262,26 +260,34 @@ export default function Local() {
           onHistory={handleHistory}
         />
       </div>
+
+      {/* Modal de confirmação para remover item */}
       {removeLocalModal && selectedItem && (
         <Modal
           onClose={() => setRemoveLocalModal(false)}
           Children={
-            <div className="flex flex-col gap-5 lg:w-100 items-center">
-              <div className=" rounded-full p-3 bg-pink200/10 w-fit">
+            <div className="flex flex-col gap-5 min-w-80 items-center px-6 py-4">
+              <div className="rounded-full p-3 bg-pink200/10 w-fit">
                 <I.Trash2 className="stroke-pink200" size={53} />
               </div>
-              <h2 className="font-medium text-2xl text-black  text-justify w-full flex flex-col items-center">
+              <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>Deseja realmente excluir</p>
-                <p className="text-pink200 truncate">{selectedItem.name}</p>
+                <p className="text-pink200 break-words text-center">
+                  {selectedItem.product_data?.name || 'este item'}
+                </p>
               </h2>
 
-              <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
+              <div className="w-full flex flex-row gap-5 mt-2">
+                <button
+                  onClick={() => setRemoveLocalModal(false)}
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                >
                   Cancelar
                 </button>
                 <button
                   type="button"
-                  className="btn w-1/2 bg-pink200 text-white  px-8 py-1.5 text-sm lg:text-base"
+                  onClick={confirmRemove}
+                  className="btn w-1/2 bg-pink200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir
                 </button>
@@ -290,6 +296,8 @@ export default function Local() {
           }
         />
       )}
+
+      {/* Modal de histórico */}
       {historyLocalModal && selectedItem && (
         <Modal
           onClose={() => setHistoryLocalModal(false)}
@@ -304,7 +312,6 @@ export default function Local() {
                   <h2 className="text-xl font-medium text-black100">
                     {selectedItem.product_data?.name}
                   </h2>
-
                   <p className="text-xl font-normal text-black100">
                     {selectedItem.product_data?.sku}
                   </p>
@@ -315,6 +322,8 @@ export default function Local() {
           }
         />
       )}
+
+      {/* Modal de mover item */}
       {newLocalModal && (
         <Modal
           onClose={() => setNewLocalModal(false)}
@@ -346,35 +355,6 @@ export default function Local() {
                   className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
-                </button>
-              </div>
-            </div>
-          }
-        />
-      )}
-      {deleteModal && (
-        <Modal
-          onClose={() => setDeleteModal(false)}
-          Children={
-            <div className="flex flex-col gap-5 min-w-100 items-center">
-              <div className=" rounded-full p-3 bg-pink200/10 w-fit">
-                <I.Trash2 className="stroke-pink200" size={53} />
-              </div>
-              <h2 className="font-medium text-2xl text-black  text-justify w-full flex flex-col items-center">
-                <p>Deseja realmente excluir</p>
-                <p className="text-pink200 truncate"> {selectedItem.product_data?.name}</p>
-              </h2>
-
-              <div className="w-full flex flex-row gap-5">
-                <button className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70">
-                  Cancelar
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmRemove}
-                  className="btn w-1/2 bg-pink200 text-white  px-8 py-1.5 text-sm lg:text-base"
-                >
-                  Excluir
                 </button>
               </div>
             </div>
