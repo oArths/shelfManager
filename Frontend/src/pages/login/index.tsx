@@ -20,21 +20,41 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
 
+    // Validações de campos vazios
+    if (!username.trim() && !password.trim()) {
+      toast.error('Preencha usuário e senha.');
+      setLoading(false);
+      return;
+    }
+    if (!username.trim()) {
+      toast.error('Preencha o nome de usuário.');
+      setLoading(false);
+      return;
+    }
+    if (!password.trim()) {
+      toast.error('Preencha a senha.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const success = await login(username, password);
 
       if (success) {
-        toast.success('Login Efetuado!!');
+        toast.success('Login efetuado com sucesso!');
         navigate('/locais', { replace: true });
       } else {
-        toast.error('Erro ao fazer login. Tente novamente. !');
+        // Se o login retornou false, significa credenciais inválidas
+        toast.error('Usuário ou senha incorretos.');
       }
     } catch (err) {
-      toast.error('Erro ao fazer login. Tente novamente. !');
+      // Erro inesperado (rede, etc.)
+      toast.error('Erro ao conectar ao servidor. Tente novamente.');
     } finally {
       setLoading(false);
     }
   };
+
   return (
     <section className="bg-white_cold w-full h-screen flex items-center justify-center">
       <Toaster
@@ -76,7 +96,7 @@ export default function Login() {
           </div>
           <button
             type="submit"
-            disabled={loading || !username || !password}
+            disabled={loading} // Agora só desabilita durante o loading
             className="btn bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
           >
             {loading ? 'Entrando...' : 'Entrar'}
