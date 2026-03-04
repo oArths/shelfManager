@@ -290,7 +290,7 @@ export default function Local() {
                     )}
                     <button
                       onClick={() => handleAddSingleProduct(product)}
-                      className="btn text-white text-sm h-8 px-5 bg-blue200"
+                      className="btn text-white text-sm h-8 px-5 bg-blue200 hover:bg-blue300"
                     >
                       Adicionar
                     </button>
@@ -327,12 +327,12 @@ export default function Local() {
           }}
           Children={
             <div className="flex flex-col gap-5 min-w-80 items-center px-6 py-4">
-              <div className="rounded-full p-3 bg-amber-100 w-fit">
-                <I.HelpCircle className="text-amber-600" size={53} />
+              <div className="rounded-full p-3 bg-yellow200/10 w-fit">
+                <I.HelpCircle className="stroke-yellow200" size={53} />
               </div>
               <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>{productToMove.name}</p>
-                <p className="text-amber-600 break-words text-center text-base font-normal mt-2">
+                <p className="text-yellow200 break-words text-center text-base font-normal mt-2">
                   já está em {productToMove.shelf_name}. Deseja mover para {localName}?
                 </p>
               </h2>
@@ -343,14 +343,14 @@ export default function Local() {
                     setMoveConfirmModal(false);
                     setProductToMove(null);
                   }}
-                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={confirmMoveFromAdd}
-                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base hover:bg-blue300"
                 >
                   Confirmar
                 </button>
@@ -366,12 +366,12 @@ export default function Local() {
           onClose={() => setRemoveLocalModal(false)}
           Children={
             <div className="flex flex-col gap-5 min-w-80 items-center px-6 py-4">
-              <div className="rounded-full p-3 bg-pink-100 w-fit">
-                <I.Trash2 className="text-pink-600" size={53} />
+              <div className="rounded-full p-3 bg-pink200/10 w-fit">
+                <I.Trash2 className="stroke-pink200" size={53} />
               </div>
               <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>Deseja realmente excluir</p>
-                <p className="text-pink-600 break-words text-center">
+                <p className="text-pink200 break-words text-center">
                   {selectedItem.product_data?.name || 'este item'}
                 </p>
               </h2>
@@ -379,14 +379,14 @@ export default function Local() {
               <div className="w-full flex flex-row gap-5 mt-2">
                 <button
                   onClick={() => setRemoveLocalModal(false)}
-                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={confirmRemove}
-                  className="btn w-1/2 bg-pink-600 text-white px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-pink200 text-white px-8 py-1.5 text-sm lg:text-base hover:bg-pink300"
                 >
                   Excluir
                 </button>
@@ -450,7 +450,7 @@ export default function Local() {
               <div className="w-full flex flex-row gap-5">
                 <button
                   onClick={() => setNewLocalModal(false)}
-                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70 hover:bg-gray-50"
                 >
                   Cancelar
                 </button>
@@ -460,8 +460,8 @@ export default function Local() {
                   disabled={!selectedShelfMove || selectedShelfMove === selectedItem.shelf_id}
                   className={`btn w-1/2 px-8 py-1.5 text-sm lg:text-base ${
                     !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : 'bg-blue200 text-white'
+                      ? 'bg-gray-400 text-white cursor-not-allowed' // cinza médio visível
+                      : 'bg-blue200 text-white hover:bg-blue300'
                   }`}
                 >
                   Confirmar
