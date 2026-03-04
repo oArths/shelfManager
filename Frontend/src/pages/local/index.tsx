@@ -58,6 +58,20 @@ export default function Local() {
     }
   };
 
+  // Define valor padrão no dropdown de mover quando as prateleiras forem carregadas
+  useEffect(() => {
+    if (allShelves.length > 0 && selectedItem) {
+      // Seleciona a primeira prateleira diferente da atual
+      const firstOtherShelf = allShelves.find(shelf => shelf.id !== selectedItem.shelf_id);
+      if (firstOtherShelf) {
+        setSelectedShelfMove(firstOtherShelf.id);
+      } else {
+        // Se não houver outra prateleira, limpa a seleção
+        setSelectedShelfMove('');
+      }
+    }
+  }, [allShelves, selectedItem]);
+
   useEffect(() => {
     if (seacrh.length < 2) {
       setSearchResults([]);
@@ -120,7 +134,15 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    if (!selectedItem || !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id) return;
+    // Verifica se uma prateleira válida foi selecionada
+    if (!selectedShelfMove) {
+      toast.error('Selecione uma prateleira para mover o produto.');
+      return;
+    }
+    if (selectedShelfMove === selectedItem.shelf_id) {
+      toast.error('O produto já está nesta prateleira.');
+      return;
+    }
 
     try {
       await apiFetch('/items/move', {
@@ -133,8 +155,10 @@ export default function Local() {
 
       setNewLocalModal(false);
       loadItems();
+      toast.success('Produto movido com sucesso!');
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao mover o produto.');
     }
   };
 
@@ -154,8 +178,10 @@ export default function Local() {
 
       setRemoveLocalModal(false);
       loadItems();
+      toast.success('Produto removido com sucesso!');
     } catch (error) {
       console.error(error);
+      toast.error('Erro ao remover o produto.');
     }
   };
 
@@ -169,10 +195,12 @@ export default function Local() {
     setLoadingHistory(true);
     try {
       const data = await apiFetch(`/items/${item.product_id}/history`);
-      setHistoryData(data);
+      // Limita a 5 registros mais recentes (já ordenados por data decrescente)
+      setHistoryData(data.slice(0, 5));
       setHistoryLocalModal(true);
     } catch (error) {
       console.error('Erro ao carregar histórico:', error);
+      toast.error('Erro ao carregar histórico.');
     } finally {
       setLoadingHistory(false);
     }
@@ -196,8 +224,10 @@ export default function Local() {
       setShowDropdown(false);
       setSearch('');
       setSearchResults([]);
+      toast.success('Produto movido com sucesso!');
     } catch (error: any) {
       console.error(error);
+      toast.error('Erro ao mover o produto.');
     }
   };
 
@@ -231,8 +261,10 @@ export default function Local() {
       setShowDropdown(false);
       setSearch('');
       setSearchResults([]);
+      toast.success('Produto adicionado com sucesso!');
     } catch (error: any) {
       console.error(error);
+      toast.error('Erro ao adicionar produto.');
     }
   };
 
@@ -405,7 +437,11 @@ export default function Local() {
             <div className="flex flex-col gap-5 w-auto">
               <nav className="flex flex-row items-center justify-start gap-5">
                 <figure className="bg-border rounded-md w-28 h-28 p-1 flex items-center justify-center">
-                  <img src={logo} className="aspect-square" />
+                  <img
+                    src={selectedItem.product_data?.image || selectedItem.product_data?.main_image || logo}
+                    alt={selectedItem.product_data?.name || 'Produto'}
+                    className="aspect-square object-cover"
+                  />
                 </figure>
                 <div className="flex flex-col items-start justify-start gap-5">
                   <h2 className="text-xl font-medium text-black100">
@@ -457,12 +493,7 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmMove}
-                  disabled={!selectedShelfMove || selectedShelfMove === selectedItem.shelf_id}
-                  className={`btn w-1/2 px-8 py-1.5 text-sm lg:text-base ${
-                    !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id
-                      ? 'bg-gray-400 text-white cursor-not-allowed' // cinza médio visível
-                      : 'bg-blue200 text-white hover:bg-blue300'
-                  }`}
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base hover:bg-blue300"
                 >
                   Confirmar
                 </button>

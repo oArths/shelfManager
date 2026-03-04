@@ -21,6 +21,9 @@ export default function TableHistory({ data }: { data: HistoryItem[] }): React.J
     }).replace(',', ' às');
   };
 
+  // Limita a exibição aos primeiros 5 registros
+  const limitedData = data.slice(0, 5);
+
   return (
     <div className="flex flex-col items-start justify-between w-full min-h-70 h-auto bg-white border-l border-r border-border">
       <table className="w-full h-auto">
@@ -32,14 +35,14 @@ export default function TableHistory({ data }: { data: HistoryItem[] }): React.J
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
+          {limitedData.length === 0 ? (
             <tr className="w-full h-80 bg-white border border-y border-x-0 border-border cursor-pointer">
               <td colSpan={3} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
                 Nenhum histórico encontrado.
               </td>
             </tr>
           ) : (
-            data.map((item, index) => (
+            limitedData.map((item, index) => (
               <tr key={item.id || index} className="tbody-tr">
                 <td className="tbody-td">{item.shelf_name}</td>
                 <td className="tbody-td">{formatDate(item.entrada)}</td>
@@ -49,6 +52,11 @@ export default function TableHistory({ data }: { data: HistoryItem[] }): React.J
           )}
         </tbody>
       </table>
+      {data.length > 5 && (
+        <div className="text-xs text-gray-500 p-2 text-center w-full">
+          Mostrando os 5 primeiros registros
+        </div>
+      )}
     </div>
   );
 }
