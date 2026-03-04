@@ -889,7 +889,7 @@ async def search_products(
     type: str = Query("name", description="Tipo de busca: 'name' ou 'sku'"),
     limit: int = Query(20, description="Limite de resultados"),
 ):
-    """Busca produtos no WordPress por nome ou SKU"""
+    """Busca produtos no WordPress por nome ou SKU e adiciona info de prateleira"""
     try:
         # Log da requisição
         print(f"Buscando produtos - Termo: {q}, Tipo: {type}, Limite: {limit}")
@@ -898,6 +898,29 @@ async def search_products(
         products = await search_wordpress_products(
             search=q, search_type=type, limit=limit
         )
+
+        # Adicionar informação de prateleira para cada produto
+        conn = get_db()
+        cur = conn.cursor()
+        for product in products:
+            product_id = product.get("id")
+            cur.execute(
+                """
+                SELECT si.shelf_id, s.name as shelf_name
+                FROM shelf_items si
+                JOIN shelves s ON si.shelf_id = s.id
+                WHERE si.product_id = ?
+                """,
+                (product_id,),
+            )
+            shelf_info = cur.fetchone()
+            if shelf_info:
+                product["in_shelf"] = shelf_info["shelf_id"]
+                product["shelf_name"] = shelf_info["shelf_name"]
+            else:
+                product["in_shelf"] = None
+                product["shelf_name"] = None
+        conn.close()
 
         return {
             "success": True,

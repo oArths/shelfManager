@@ -7,6 +7,7 @@ import TableHistory from '../../components/table/tableHistory';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Local() {
   const chartOptions = ['Nome do Produto', 'Sku'];
@@ -23,6 +24,10 @@ export default function Local() {
   // Novos estados para histórico
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Estado para modal de confirmação de mover ao adicionar
+  const [moveConfirmModal, setMoveConfirmModal] = useState(false);
+  const [productToMove, setProductToMove] = useState<any>(null);
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -108,7 +113,6 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    // Impede mover para a mesma prateleira (já deve estar filtrado, mas segurança extra)
     if (!selectedItem || !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id) return;
 
     try {
@@ -153,7 +157,6 @@ export default function Local() {
     setRemoveLocalModal(true);
   };
 
-  // Função handleHistory modificada para buscar dados da API
   const handleHistory = async (item: any) => {
     setSelectedItem(item);
     setLoadingHistory(true);
@@ -168,12 +171,44 @@ export default function Local() {
     }
   };
 
+  // Função para confirmar movimento vindo do modal de adição
+  const confirmMoveFromAdd = async () => {
+    if (!id || !productToMove) return;
+
+    try {
+      await apiFetch('/items/move', {
+        method: 'POST',
+        body: JSON.stringify({
+          product_id: productToMove.id,
+          to_shelf_id: Number(id),
+        }),
+      });
+
+      loadItems();
+      setMoveConfirmModal(false);
+      setProductToMove(null);
+      setShowDropdown(false);
+      setSearch('');
+      setSearchResults([]);
+    } catch (error: any) {
+      console.error(error);
+    }
+  };
+
   const handleAddSingleProduct = async (product: any) => {
     if (!id) return;
 
-    // Verifica se já está na prateleira
+    // Verifica se o produto já está em alguma prateleira
     if (product.in_shelf) {
-      alert(`Este produto já está em ${product.shelf_name}`);
+      // Se já está na prateleira atual, exibe mensagem de erro
+      if (Number(product.in_shelf) === Number(id)) {
+        toast.error('Este produto já está nesta prateleira.');
+        return;
+      }
+      // Caso contrário, abre modal para mover de outra prateleira
+      setShowDropdown(false); // Fecha o dropdown antes de abrir o modal
+      setProductToMove(product);
+      setMoveConfirmModal(true);
       return;
     }
 
@@ -186,12 +221,8 @@ export default function Local() {
         }),
       });
 
-      // Recarrega a lista
       loadItems();
-
-      // Fecha o dropdown
       setShowDropdown(false);
-      setSearch('');
       setSearch('');
       setSearchResults([]);
     } catch (error: any) {
@@ -200,15 +231,23 @@ export default function Local() {
   };
 
   return (
-    <section className="flex flex-col w-full  items-center justify-center  ">
+    <section className="flex flex-col w-full items-center justify-center">
+      {/* Toaster adicionado para exibir notificações */}
+      <Toaster
+        position="top-center"
+        reverseOrder={false}
+        toastOptions={{
+          duration: 3000,
+        }}
+      />
       <div className="flex flex-col gap-5 w-[90%] h-full">
         <h1 className="text-3xl font-semibold text-black200 pt-10 pb-0">
           {localName}
         </h1>
 
-        <fieldset className=" w-full flex flex-col lg:flex-row items-end gap-5">
+        <fieldset className="w-full flex flex-col lg:flex-row items-end gap-5">
           <div className="relative w-full">
-            <div className="  flex items-center w-full   relative">
+            <div className="flex items-center w-full relative">
               <I.Search size={24} className="stroke-black200/70 absolute top-2 left-3" />
               <input
                 placeholder="Pesquisar..."
@@ -226,8 +265,8 @@ export default function Local() {
                     key={product.id}
                     className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center gap-5"
                   >
-                    <div className=" flex flex-row gap-5">
-                      <figure className=" bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
+                    <div className="flex flex-row gap-5">
+                      <figure className="bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
                         <img
                           src={product.image || product.main_image || ''}
                           alt={product.name || 'Produto'}
@@ -246,10 +285,7 @@ export default function Local() {
                     )}
                     <button
                       onClick={() => handleAddSingleProduct(product)}
-                      disabled={product.in_shelf}
-                      className={`btn text-white text-sm h-8 px-5 ${
-                        product.in_shelf ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue200'
-                      }`}
+                      className="btn text-white text-sm h-8 px-5 bg-blue200"
                     >
                       Adicionar
                     </button>
@@ -258,7 +294,7 @@ export default function Local() {
               </div>
             )}
           </div>
-          <label className=" flex flex-col gap-1 lg:w-1/2 w-full ">
+          <label className="flex flex-col gap-1 lg:w-1/2 w-full">
             <span>Tipo de Pesquisa</span>
             <SingleDropdown
               filterKey="title"
@@ -276,18 +312,60 @@ export default function Local() {
         />
       </div>
 
+      {/* Modal de confirmação para mover produto ao adicionar */}
+      {moveConfirmModal && productToMove && (
+        <Modal
+          onClose={() => {
+            setMoveConfirmModal(false);
+            setProductToMove(null);
+          }}
+          Children={
+            <div className="flex flex-col gap-5 min-w-80 items-center px-6 py-4">
+              <div className="rounded-full p-3 bg-amber-100 w-fit">
+                <I.HelpCircle className="text-amber-600" size={53} />
+              </div>
+              <h2 className="font-medium text-2xl text-black text-center w-full">
+                <p>{productToMove.name}</p>
+                <p className="text-amber-600 break-words text-center text-base font-normal mt-2">
+                  já está em {productToMove.shelf_name}. Deseja mover para {localName}?
+                </p>
+              </h2>
+
+              <div className="w-full flex flex-row gap-5 mt-2">
+                <button
+                  onClick={() => {
+                    setMoveConfirmModal(false);
+                    setProductToMove(null);
+                  }}
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmMoveFromAdd}
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
+                >
+                  Confirmar
+                </button>
+              </div>
+            </div>
+          }
+        />
+      )}
+
       {/* Modal de confirmação para remover item */}
       {removeLocalModal && selectedItem && (
         <Modal
           onClose={() => setRemoveLocalModal(false)}
           Children={
             <div className="flex flex-col gap-5 min-w-80 items-center px-6 py-4">
-              <div className="rounded-full p-3 bg-pink200/10 w-fit">
-                <I.Trash2 className="stroke-pink200" size={53} />
+              <div className="rounded-full p-3 bg-pink-100 w-fit">
+                <I.Trash2 className="text-pink-600" size={53} />
               </div>
               <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>Deseja realmente excluir</p>
-                <p className="text-pink200 break-words text-center">
+                <p className="text-pink-600 break-words text-center">
                   {selectedItem.product_data?.name || 'este item'}
                 </p>
               </h2>
@@ -302,7 +380,7 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmRemove}
-                  className="btn w-1/2 bg-pink200 text-white px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-pink-600 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir
                 </button>
@@ -318,9 +396,9 @@ export default function Local() {
           onClose={() => setHistoryLocalModal(false)}
           isFull={true}
           Children={
-            <div className="flex flex-col gap-5  w-auto ">
-              <nav className=" flex flex-row items-center justify-start gap-5">
-                <figure className=" bg-border rounded-md w-28 h-28 p-1 flex items-center justify-center">
+            <div className="flex flex-col gap-5 w-auto">
+              <nav className="flex flex-row items-center justify-start gap-5">
+                <figure className="bg-border rounded-md w-28 h-28 p-1 flex items-center justify-center">
                   <img src={logo} className="aspect-square" />
                 </figure>
                 <div className="flex flex-col items-start justify-start gap-5">
@@ -347,11 +425,10 @@ export default function Local() {
         <Modal
           onClose={() => setNewLocalModal(false)}
           Children={
-            <div className="flex flex-col gap-5 lg:w-100 ">
+            <div className="flex flex-col gap-5 lg:w-100">
               <h2 className="font-medium text-xl text-black">Escolha um local para o produto</h2>
-              <div className="w-full flex flex-col gap-1  ">
-                <label className="text-base text-black font-normal ">Novo Local</label>
-                {/* Filtra a prateleira atual para não aparecer nas opções */}
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-base text-black font-normal">Novo Local</label>
                 <SingleDropdown
                   filterKey="title"
                   relative={true}
