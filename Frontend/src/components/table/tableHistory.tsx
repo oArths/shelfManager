@@ -1,46 +1,52 @@
-import type { Local } from './interface';
+import React from 'react';
 
-export default function TableHistory({ data }: { data: Local[] }): React.JSX.Element {
+interface HistoryItem {
+  id: number;
+  shelf_name: string;
+  entrada: string;
+  saida: string | null;
+}
+
+export default function TableHistory({ data }: { data: HistoryItem[] }): React.JSX.Element {
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    return date.toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    }).replace(',', ' às');
+  };
+
   return (
-    <div className="flex flex-col items-start  justify-between w-full min-h-70 h-auto  bg-white border-l border-r   border-border">
-      <table className="w-full h-auto  ">
-        <thead className="w-full ">
-          <tr className="thead-tr ">
-            <td className="thead-td  " scope="col">
-              Local
-            </td>
-            <td className="thead-td" scope="col">
-              Entrada
-            </td>
-            <td className="thead-td " scope="col">
-              Saida
-            </td>
+    <div className="flex flex-col items-start justify-between w-full min-h-70 h-auto bg-white border-l border-r border-border">
+      <table className="w-full h-auto">
+        <thead className="w-full">
+          <tr className="thead-tr">
+            <td className="thead-td" scope="col">Local</td>
+            <td className="thead-td" scope="col">Entrada</td>
+            <td className="thead-td" scope="col">Saída</td>
           </tr>
         </thead>
         <tbody>
-          {data.length < 1 && (
-            <tr className="w-full h-80 bg-white border border-y  border-x-0 border-border cursor-pointer">
-              <td
-                colSpan={3}
-                className="w-full h-full text-gray500 font-light text-base text-center bg-white"
-              >
-                item não encontrado...
+          {data.length === 0 ? (
+            <tr className="w-full h-80 bg-white border border-y border-x-0 border-border cursor-pointer">
+              <td colSpan={3} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
+                Nenhum histórico encontrado.
               </td>
             </tr>
+          ) : (
+            data.map((item, index) => (
+              <tr key={item.id || index} className="tbody-tr">
+                <td className="tbody-td">{item.shelf_name}</td>
+                <td className="tbody-td">{formatDate(item.entrada)}</td>
+                <td className="tbody-td">{formatDate(item.saida)}</td>
+              </tr>
+            ))
           )}
-
-          {data &&
-            data.map((Item, Index) => {
-              return (
-                <tr key={Index} className="tbody-tr ">
-                  <td className="tbody-td " scope="row">
-                    {Item.name}
-                  </td>
-
-                  <td className="tbody-td">{Item.item_count}</td>
-                </tr>
-              );
-            })}
         </tbody>
       </table>
     </div>

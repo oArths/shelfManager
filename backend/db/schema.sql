@@ -32,7 +32,19 @@ CREATE TABLE IF NOT EXISTS shelf_items (
     FOREIGN KEY (added_by) REFERENCES users(id)
 );
 
+-- Histórico de movimentações de itens
+CREATE TABLE IF NOT EXISTS item_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id INTEGER NOT NULL,
+    shelf_id INTEGER NOT NULL,
+    entrada TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    saida TIMESTAMP,
+    FOREIGN KEY (product_id) REFERENCES shelf_items(product_id) ON DELETE CASCADE,
+    FOREIGN KEY (shelf_id) REFERENCES shelves(id) ON DELETE CASCADE
+);
+
 -- Índices para performance
 CREATE INDEX IF NOT EXISTS idx_shelf_items_product ON shelf_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_shelf_items_shelf ON shelf_items(shelf_id);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_item_history_product ON item_history(product_id);

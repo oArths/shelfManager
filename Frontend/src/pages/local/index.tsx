@@ -20,6 +20,10 @@ export default function Local() {
   const [historyLocalModal, setHistoryLocalModal] = useState(false);
   const [optionChart, setOptionChart] = useState(chartOptions[0]);
 
+  // Novos estados para histórico
+  const [historyData, setHistoryData] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -104,7 +108,8 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    if (!selectedItem || !selectedShelfMove) return;
+    // Impede mover para a mesma prateleira (já deve estar filtrado, mas segurança extra)
+    if (!selectedItem || !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id) return;
 
     try {
       await apiFetch('/items/move', {
@@ -148,9 +153,19 @@ export default function Local() {
     setRemoveLocalModal(true);
   };
 
-  const handleHistory = (item: any) => {
+  // Função handleHistory modificada para buscar dados da API
+  const handleHistory = async (item: any) => {
     setSelectedItem(item);
-    setHistoryLocalModal(true);
+    setLoadingHistory(true);
+    try {
+      const data = await apiFetch(`/items/${item.product_id}/history`);
+      setHistoryData(data);
+      setHistoryLocalModal(true);
+    } catch (error) {
+      console.error('Erro ao carregar histórico:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
   };
 
   const handleAddSingleProduct = async (product: any) => {
@@ -317,14 +332,18 @@ export default function Local() {
                   </p>
                 </div>
               </nav>
-              <TableHistory data={[selectedItem]} />
+              {loadingHistory ? (
+                <div className="text-center py-4">Carregando...</div>
+              ) : (
+                <TableHistory data={historyData} />
+              )}
             </div>
           }
         />
       )}
 
       {/* Modal de mover item */}
-      {newLocalModal && (
+      {newLocalModal && selectedItem && (
         <Modal
           onClose={() => setNewLocalModal(false)}
           Children={
@@ -332,10 +351,13 @@ export default function Local() {
               <h2 className="font-medium text-xl text-black">Escolha um local para o produto</h2>
               <div className="w-full flex flex-col gap-1  ">
                 <label className="text-base text-black font-normal ">Novo Local</label>
+                {/* Filtra a prateleira atual para não aparecer nas opções */}
                 <SingleDropdown
                   filterKey="title"
                   relative={true}
-                  options={allShelves.map((s) => s.name)}
+                  options={allShelves
+                    .filter((shelf) => shelf.id !== selectedItem.shelf_id)
+                    .map((s) => s.name)}
                   selectedOption={
                     allShelves.find((s) => s.id === Number(selectedShelfMove))?.name || ''
                   }
@@ -345,14 +367,19 @@ export default function Local() {
               <div className="w-full flex flex-row gap-5">
                 <button
                   onClick={() => setNewLocalModal(false)}
-                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={confirmMove}
-                  className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
+                  disabled={!selectedShelfMove || selectedShelfMove === selectedItem.shelf_id}
+                  className={`btn w-1/2 px-8 py-1.5 text-sm lg:text-base ${
+                    !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-blue200 text-white'
+                  }`}
                 >
                   Confirmar
                 </button>

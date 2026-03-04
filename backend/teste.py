@@ -419,6 +419,25 @@ def move_item(move: ShelfItemMove, current_user: dict = Depends(get_current_user
         (move.to_shelf_id, move.product_id),
     )
 
+    # Atualizar saída do histórico anterior (onde saida é nulo)
+    cur.execute(
+        """
+        UPDATE item_history
+        SET saida = CURRENT_TIMESTAMP
+        WHERE product_id = ? AND shelf_id = ? AND saida IS NULL
+        """,
+        (move.product_id, from_shelf_id),
+    )
+
+    # Inserir novo histórico para a prateleira destino
+    cur.execute(
+        """
+        INSERT INTO item_history (product_id, shelf_id, entrada)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        """,
+        (move.product_id, move.to_shelf_id),
+    )
+
     conn.commit()
 
     # Retorna item atualizado
@@ -828,7 +847,7 @@ async def add_item_to_shelf(
         conn.close()
         raise HTTPException(status_code=404, detail="Produto não existe no WordPress")
 
-    # Inserir apenas referência
+    # Inserir referência na prateleira
     cur.execute(
         """
         INSERT INTO shelf_items (shelf_id, product_id, quantity, added_by)
@@ -840,6 +859,15 @@ async def add_item_to_shelf(
             item.quantity,
             current_user["id"],
         ),
+    )
+
+    # Inserir no histórico (entrada)
+    cur.execute(
+        """
+        INSERT INTO item_history (product_id, shelf_id, entrada)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        """,
+        (item.product_id, shelf_id),
     )
 
     item_id = cur.lastrowid
@@ -885,39 +913,41 @@ async def search_products(
         traceback.print_exc()
         return {"success": False, "error": str(e), "data": []}
     
-# @app.get("/products/search")
-# async def search_products_in_wordpress(
-#     q: str, limit: int = 20, current_user: dict = Depends(get_current_user)
-# ):
-#     """Busca produtos no WordPress (proxy)"""
-#     products = await search_wordpress_products(q, limit)
-#     print(f"Busca por '{q}' retornou {len(products)} produtos do WordPress")
 
-#     # Verificar quais produtos já estão em prateleiras
-#     conn = get_db()
-#     cur = conn.cursor()
+# ==================== ENDPOINT DE HISTÓRICO ====================
 
-#     for product in products:
-#         product_id = product.get("id")
-#         product["main_image"] = product.get("main_image")
-#         cur.execute(
-#             """
-#             SELECT si.shelf_id, s.name as shelf_name
-#             FROM shelf_items si
-#             JOIN shelves s ON si.shelf_id = s.id
-#             WHERE si.product_id = ?
-#         """,
-#             (product_id,),
-#         )
+@app.get("/items/{product_id}/history")
+def get_item_history(product_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
 
-#         shelf_info = cur.fetchone()
-#         if shelf_info:
-#             product["in_shelf"] = shelf_info["shelf_id"]
-#             product["shelf_name"] = shelf_info["shelf_name"]
-#         else:
-#             product["in_shelf"] = None
-#             product["shelf_name"] = None
+    cur.execute("""
+        SELECT 
+            ih.id,
+            ih.product_id,
+            ih.shelf_id,
+            s.name as shelf_name,
+            ih.entrada,
+            ih.saida
+        FROM item_history ih
+        JOIN shelves s ON ih.shelf_id = s.id
+        WHERE ih.product_id = ?
+        ORDER BY ih.entrada DESC
+    """, (product_id,))
 
-#     conn.close()
+    rows = cur.fetchall()
+    conn.close()
 
-#     return {"success": True, "search": q, "count": len(products), "data": products}
+    # Converter para lista de dicionários
+    history = []
+    for row in rows:
+        history.append({
+            "id": row["id"],
+            "product_id": row["product_id"],
+            "shelf_id": row["shelf_id"],
+            "shelf_name": row["shelf_name"],
+            "entrada": row["entrada"],
+            "saida": row["saida"]
+        })
+
+    return history
