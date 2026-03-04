@@ -29,6 +29,9 @@ export default function Local() {
   const [moveConfirmModal, setMoveConfirmModal] = useState(false);
   const [productToMove, setProductToMove] = useState<any>(null);
 
+  // Estado para carregamento dos itens
+  const [loadingItems, setLoadingItems] = useState(false);
+
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingSearch, setLoadingSearch] = useState(false);
@@ -95,11 +98,15 @@ export default function Local() {
   }, [id]);
 
   const loadItems = async () => {
+    setLoadingItems(true);
     try {
       const data = await apiFetch(`/shelves/${id}/items`);
       setItems(data);
     } catch (error: any) {
       console.error(error);
+      toast.error('Erro ao carregar itens');
+    } finally {
+      setLoadingItems(false);
     }
   };
 
@@ -113,14 +120,7 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    if (!selectedItem || !selectedShelfMove) {
-      toast.error('Selecione um local para mover o produto.');
-      return;
-    }
-    if (selectedShelfMove === selectedItem.shelf_id) {
-      toast.error('O produto já está nesta prateleira.');
-      return;
-    }
+    if (!selectedItem || !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id) return;
 
     try {
       await apiFetch('/items/move', {
@@ -178,7 +178,6 @@ export default function Local() {
     }
   };
 
-  // Função para confirmar movimento vindo do modal de adição
   const confirmMoveFromAdd = async () => {
     if (!id || !productToMove) return;
 
@@ -213,7 +212,7 @@ export default function Local() {
         return;
       }
       // Caso contrário, abre modal para mover de outra prateleira
-      setShowDropdown(false); // Fecha o dropdown antes de abrir o modal
+      setShowDropdown(false);
       setProductToMove(product);
       setMoveConfirmModal(true);
       return;
@@ -239,7 +238,6 @@ export default function Local() {
 
   return (
     <section className="flex flex-col w-full items-center justify-center">
-      {/* Toaster adicionado para exibir notificações */}
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -316,6 +314,7 @@ export default function Local() {
           onMove={handleMoveNewLocal}
           onRemove={handleRemove}
           onHistory={handleHistory}
+          isLoading={loadingItems}
         />
       </div>
 
@@ -387,7 +386,7 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmRemove}
-                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-pink-600 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir
                 </button>
@@ -458,7 +457,12 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmMove}
-                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
+                  disabled={!selectedShelfMove || selectedShelfMove === selectedItem.shelf_id}
+                  className={`btn w-1/2 px-8 py-1.5 text-sm lg:text-base ${
+                    !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id
+                      ? 'bg-gray-400 text-white cursor-not-allowed'
+                      : 'bg-blue200 text-white'
+                  }`}
                 >
                   Confirmar
                 </button>

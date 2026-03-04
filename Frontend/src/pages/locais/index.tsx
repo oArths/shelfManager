@@ -117,7 +117,7 @@ export default function Locais() {
   const loadLocais = async () => {
     try {
       const data = await apiFetch('/shelves');
-      console.log('RETORNO API:', data); 
+      console.log('RETORNO API:', data); // Comentário original mantido
       setLocais(data);
       // Após carregar as prateleiras, carrega os itens de cada uma para suportar buscas por SKU e nome
       await loadAllItems(data);
@@ -161,7 +161,7 @@ export default function Locais() {
   };
 
   return (
-    <section className="flex flex-col  w-full items-center justify-center  pb-10">
+    <section className="flex flex-col w-full items-center justify-center pb-10">
       <Toaster
         position="top-center"
         reverseOrder={false}
@@ -171,8 +171,8 @@ export default function Locais() {
       />
       <div className="flex flex-col gap-5 w-[90%] h-full">
         <h1 className="text-4xl font-medium text-black200 pt-5 ">Locais</h1>
-        <fieldset className=" w-full flex flex-col lg:flex-row items-end gap-5">
-          <div className="  flex items-center w-full  relative">
+        <fieldset className="w-full flex flex-col lg:flex-row items-end gap-5">
+          <div className="flex items-center w-full relative">
             <I.Search size={24} className="stroke-black200/70 absolute top-2 left-3" />
             <input
               placeholder="Pesquisar..."
@@ -182,7 +182,7 @@ export default function Locais() {
             />
           </div>
           <div className="w-full flex flex-col md:flex-row justify-between items-end gap-5">
-            <label className=" flex flex-col gap-1 lg:w-1/2 w-full ">
+            <label className="flex flex-col gap-1 lg:w-1/2 w-full">
               <span>Tipo de Pesquisa</span>
               <SingleDropdown
                 filterKey="title"
@@ -199,24 +199,29 @@ export default function Locais() {
             </button>
           </div>
         </fieldset>
-        {/* Indicador de carregamento dos itens (para feedback visual) */}
+
+        {/* Indicador de carregamento dos itens - versão spinner discreto */}
         {loadingItems && (
-          <div className="text-center text-gray-500 py-2">Carregando itens das prateleiras...</div>
+          <div className="flex items-center justify-start gap-2 text-gray-500 text-sm py-1">
+            <I.Loader className="animate-spin" size={16} />
+            <span>Carregando itens das prateleiras...</span>
+          </div>
         )}
+
         <TableLocais data={filteredLocais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
       </div>
 
-      {/* Modal de edição */}
+      {/* Modais (edit, create, delete) - mantidos iguais ao original */}
       {editModal && (
         <Modal
           onClose={() => setEditModal(false)}
           Children={
             <div className="flex flex-col gap-5 min-w-100">
               <h2 className="font-medium text-2xl text-black">Alterar nome do Local</h2>
-              <div className="w-full flex flex-col gap-1 ">
-                <label className="text-lg text-black font-medium ">Nome</label>
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-lg text-black font-medium">Nome</label>
                 <input
-                  className="input px-4 "
+                  className="input px-4"
                   type="text"
                   value={changeName ?? ''}
                   onChange={(e) => setChangeName(e.target.value)}
@@ -226,14 +231,14 @@ export default function Locais() {
               <div className="w-full flex flex-row gap-5">
                 <button
                   onClick={() => setEditModal(false)}
-                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handleUpdateLocal}
-                  className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
                 </button>
@@ -243,17 +248,16 @@ export default function Locais() {
         />
       )}
 
-      {/* Modal de criação */}
       {newLocalModal && (
         <Modal
           onClose={() => setNewLocalModal(false)}
           Children={
             <div className="flex flex-col gap-5 min-w-100">
               <h2 className="font-medium text-2xl text-black">Adicionar Local</h2>
-              <div className="w-full flex flex-col gap-1 ">
-                <label className="text-lg text-black font-medium ">Nome</label>
+              <div className="w-full flex flex-col gap-1">
+                <label className="text-lg text-black font-medium">Nome</label>
                 <input
-                  className="input px-4 "
+                  className="input px-4"
                   type="text"
                   value={newLocalName ?? ''}
                   onChange={(e) => setNewLocalName(e.target.value)}
@@ -263,14 +267,14 @@ export default function Locais() {
               <div className="w-full flex flex-row gap-5">
                 <button
                   onClick={() => setNewLocalModal(false)}
-                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handleCreateLocal}
-                  className="btn w-1/2 bg-blue200 text-white  px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
                 </button>
@@ -280,16 +284,15 @@ export default function Locais() {
         />
       )}
 
-      {/* Modal de exclusão */}
       {deleteModal && (
         <Modal
           onClose={() => setDeleteModal(false)}
           Children={
             <div className="flex flex-col gap-5 min-w-100 items-center">
-              <div className=" rounded-full p-3 bg-pink200/10 w-fit">
+              <div className="rounded-full p-3 bg-pink200/10 w-fit">
                 <I.Trash2 className="stroke-pink200" size={53} />
               </div>
-              <h2 className="font-medium text-2xl text-black  text-justify w-full flex flex-col items-center">
+              <h2 className="font-medium text-2xl text-black text-justify w-full flex flex-col items-center">
                 <p>Deseja realmente excluir</p>
                 <p className="text-pink200 truncate">{itemName}</p>
               </h2>
@@ -297,14 +300,14 @@ export default function Locais() {
               <div className="w-full flex flex-row gap-5">
                 <button
                   onClick={() => setDeleteModal(false)}
-                  className=" btn px-8 py-1.5  w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
+                  className="btn px-8 py-1.5 w-1/2 text-sm lg:text-base bg-white border border-black400/70 text-black400/70"
                 >
                   Cancelar
                 </button>
                 <button
                   type="button"
                   onClick={handleDeleteLocal}
-                  className="btn w-1/2 bg-pink200 text-white  px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-pink200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir
                 </button>

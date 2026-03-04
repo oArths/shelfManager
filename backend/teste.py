@@ -619,7 +619,7 @@ async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
             response = await client.get(
                 f"{WORDPRESS_API_URL}/by-id/{product_id}",
                 headers={"X-API-Key": WORDPRESS_API_KEY},
-                timeout=2.0,
+                timeout=4.0,
             )
 
             if response.status_code == 200:
@@ -658,7 +658,7 @@ async def search_wordpress_products(
                 endpoint,
                 params=params,
                 headers={"X-API-Key": WORDPRESS_API_KEY},
-                timeout=2.0,
+                timeout=4.0,
             )
 
             if response.status_code == 200:
