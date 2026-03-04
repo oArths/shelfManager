@@ -115,6 +115,7 @@ def init_db():
     Path("db").mkdir(exist_ok=True)
 
     conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA foreign_keys = ON")  # Ativa foreign keys
     cur = conn.cursor()
 
     with open(SCHEMA_PATH, "r", encoding="utf-8") as f:
@@ -607,6 +608,7 @@ def startup_event():
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")  # Ativa foreign keys
     return conn
 
 
@@ -617,7 +619,7 @@ async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
             response = await client.get(
                 f"{WORDPRESS_API_URL}/by-id/{product_id}",
                 headers={"X-API-Key": WORDPRESS_API_KEY},
-                timeout=10.0,
+                timeout=2.0,
             )
 
             if response.status_code == 200:
@@ -656,7 +658,7 @@ async def search_wordpress_products(
                 endpoint,
                 params=params,
                 headers={"X-API-Key": WORDPRESS_API_KEY},
-                timeout=10.0,
+                timeout=2.0,
             )
 
             if response.status_code == 200:
@@ -861,6 +863,9 @@ async def add_item_to_shelf(
         ),
     )
 
+    # Capturar o ID do item recém-inserido (deve ser antes do histórico)
+    item_id = cur.lastrowid
+
     # Inserir no histórico (entrada)
     cur.execute(
         """
@@ -870,9 +875,9 @@ async def add_item_to_shelf(
         (item.product_id, shelf_id),
     )
 
-    item_id = cur.lastrowid
     conn.commit()
 
+    # Buscar o item completo para retornar
     cur.execute("SELECT * FROM shelf_items WHERE id = ?", (item_id,))
     item_data = dict(cur.fetchone())
     conn.close()

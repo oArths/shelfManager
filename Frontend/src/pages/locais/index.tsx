@@ -19,6 +19,32 @@ export default function Locais() {
 
   const [locais, setLocais] = useState<any[]>([]);
   const [selectedLocal, setSelectedLocal] = useState<any>(null);
+
+  // Estados para armazenar itens de cada prateleira (necessário para busca por SKU e Nome do Produto)
+  const [itemsByShelf, setItemsByShelf] = useState<Record<number, any[]>>({});
+  const [loadingItems, setLoadingItems] = useState(false);
+
+  // Função para carregar itens de todas as prateleiras
+  const loadAllItems = async (shelves: any[]) => {
+    setLoadingItems(true);
+    const map: Record<number, any[]> = {};
+    // Busca itens de cada prateleira em paralelo
+    await Promise.all(
+      shelves.map(async (shelf) => {
+        try {
+          const items = await apiFetch(`/shelves/${shelf.id}/items`);
+          map[shelf.id] = items;
+        } catch (error) {
+          console.error(`Erro ao carregar itens da prateleira ${shelf.id}:`, error);
+          map[shelf.id] = []; // em caso de erro, considera vazio
+        }
+      })
+    );
+    setItemsByShelf(map);
+    setLoadingItems(false);
+  };
+
+  // Filtro dinâmico baseado na opção escolhida
   const filteredLocais = locais.filter((local) => {
     if (!search.trim()) return true;
 
@@ -26,18 +52,30 @@ export default function Locais() {
 
     switch (optionChart) {
       case 'Nome da Prateleira':
+        // Filtra pelo nome da prateleira
         return local.name?.toLowerCase().includes(value);
 
-      case 'Sku':
-        return local.sku?.toLowerCase().includes(value);
+      case 'Sku': {
+        // Filtra pelas prateleiras que possuem itens com o SKU pesquisado
+        const items = itemsByShelf[local.id] || [];
+        return items.some((item) =>
+          item.product_data?.sku?.toLowerCase().includes(value)
+        );
+      }
 
-      case 'Nome do Produto':
-        return local.product_name?.toLowerCase().includes(value);
+      case 'Nome do Produto': {
+        // Filtra pelas prateleiras que possuem itens com o nome pesquisado
+        const items = itemsByShelf[local.id] || [];
+        return items.some((item) =>
+          item.product_data?.name?.toLowerCase().includes(value)
+        );
+      }
 
       default:
         return true;
     }
   });
+
   const handleDeleteLocal = async () => {
     try {
       await apiFetch(`/shelves/${selectedLocal.id}`, {
@@ -45,12 +83,12 @@ export default function Locais() {
       });
 
       setDeleteModal(false);
-      await loadLocais();
-      toast.success('Local excluído com sucesso!');
+      await loadLocais(); // Recarrega a lista após excluir
     } catch (error: any) {
       toast.error(error.message);
     }
   };
+
   const handleUpdateLocal = async () => {
     try {
       await apiFetch(`/shelves/${selectedLocal.id}`, {
@@ -59,8 +97,7 @@ export default function Locais() {
       });
 
       setEditModal(false);
-      await loadLocais();
-      toast.success('Local atualizado com sucesso!');
+      await loadLocais(); // Recarrega a lista após atualizar
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -73,23 +110,23 @@ export default function Locais() {
   };
 
   useEffect(() => {
-    console.log('recarregou');
+    console.log('recarregou'); // Comentário original mantido
     loadLocais();
   }, []);
 
   const loadLocais = async () => {
     try {
       const data = await apiFetch('/shelves');
-
-      console.log('RETORNO API:', data);
+      console.log('RETORNO API:', data); 
       setLocais(data);
+      // Após carregar as prateleiras, carrega os itens de cada uma para suportar buscas por SKU e nome
+      await loadAllItems(data);
     } catch (error: any) {
       toast.error(error.message);
     }
   };
 
-  // Corrigido: usar 'name' em vez de 'nome'
-  const itemName = selectedLocal?.name || '';
+  const itemName = selectedLocal?.nome || '';
 
   const handleCreateLocal = async () => {
     if (!newLocalName.trim()) {
@@ -108,11 +145,12 @@ export default function Locais() {
       toast.success('Local criado com sucesso!');
       setNewLocalModal(false);
       setNewLocalName('');
-      await loadLocais();
+      await loadLocais(); // Recarrega a lista após criar
     } catch (error: any) {
       toast.error(error.message);
     }
   };
+
   const HandlerChartOptionSelect = (option: string): void => {
     setOptionChart(option);
   };
@@ -121,6 +159,7 @@ export default function Locais() {
     setSelectedLocal(local);
     setDeleteModal(true);
   };
+
   return (
     <section className="flex flex-col  w-full items-center justify-center  pb-10">
       <Toaster
@@ -138,6 +177,7 @@ export default function Locais() {
             <input
               placeholder="Pesquisar..."
               className="input w-full px-12 bg-white"
+              value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
           </div>
@@ -159,8 +199,14 @@ export default function Locais() {
             </button>
           </div>
         </fieldset>
+        {/* Indicador de carregamento dos itens (para feedback visual) */}
+        {loadingItems && (
+          <div className="text-center text-gray-500 py-2">Carregando itens das prateleiras...</div>
+        )}
         <TableLocais data={filteredLocais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
       </div>
+
+      {/* Modal de edição */}
       {editModal && (
         <Modal
           onClose={() => setEditModal(false)}
@@ -196,6 +242,8 @@ export default function Locais() {
           }
         />
       )}
+
+      {/* Modal de criação */}
       {newLocalModal && (
         <Modal
           onClose={() => setNewLocalModal(false)}
@@ -231,6 +279,8 @@ export default function Locais() {
           }
         />
       )}
+
+      {/* Modal de exclusão */}
       {deleteModal && (
         <Modal
           onClose={() => setDeleteModal(false)}
