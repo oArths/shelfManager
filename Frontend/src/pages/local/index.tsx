@@ -113,7 +113,14 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    if (!selectedItem || !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id) return;
+    if (!selectedItem || !selectedShelfMove) {
+      toast.error('Selecione um local para mover o produto.');
+      return;
+    }
+    if (selectedShelfMove === selectedItem.shelf_id) {
+      toast.error('O produto já está nesta prateleira.');
+      return;
+    }
 
     try {
       await apiFetch('/items/move', {
@@ -380,7 +387,7 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmRemove}
-                  className="btn w-1/2 bg-pink-600 text-white px-8 py-1.5 text-sm lg:text-base"
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Excluir
                 </button>
@@ -451,12 +458,7 @@ export default function Local() {
                 <button
                   type="button"
                   onClick={confirmMove}
-                  disabled={!selectedShelfMove || selectedShelfMove === selectedItem.shelf_id}
-                  className={`btn w-1/2 px-8 py-1.5 text-sm lg:text-base ${
-                    !selectedShelfMove || selectedShelfMove === selectedItem.shelf_id
-                      ? 'bg-gray-400 text-white cursor-not-allowed'
-                      : 'bg-blue200 text-white'
-                  }`}
+                  className="btn w-1/2 bg-blue200 text-white px-8 py-1.5 text-sm lg:text-base"
                 >
                   Confirmar
                 </button>
