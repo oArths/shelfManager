@@ -2,12 +2,11 @@ import jwt
 import bcrypt
 import sqlite3
 import httpx
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, List
 from pathlib import Path
 from jwt import PyJWTError
 from datetime import datetime
 from pytz import InvalidTimeError
-from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Depends, Query, Request, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -22,10 +21,11 @@ SECRET_KEY = "SHELF_MANAGER_2024"
 ALGORITHM = "HS256"
 security = HTTPBearer()
 
-allow_origins=[
+allow_origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173"
 ]
+
 # ==================== CORS ====================
 app.add_middleware(
     CORSMiddleware,
@@ -102,6 +102,7 @@ class ShelfItemMove(BaseModel):
     product_id: int
     to_shelf_id: int
 
+
 class WordpressProduct(TypedDict):
     id: int
     name: str
@@ -110,6 +111,7 @@ class WordpressProduct(TypedDict):
     stock: Optional[int]
     main_image: Optional[str]
     product_url: Optional[str]
+
 
 # ==================== FUNÇÕES DE BANCO E AUTENTICAÇÃO ====================
 
@@ -258,7 +260,97 @@ def login(user: UserLogin):
     return {"access_token": token, "token_type": "bearer"}
 
 
-# ==================== ENDPOINTS FALTANTES ====================
+# ==================== ENDPOINTS DE PRATELEIRAS ====================
+
+
+@app.get("/shelves", response_model=List[ShelfResponse])
+def get_shelves(current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT s.*, 
+               COUNT(si.id) as item_count,
+               u.username as created_by_name
+        FROM shelves s
+        LEFT JOIN shelf_items si ON s.id = si.shelf_id
+        LEFT JOIN users u ON s.created_by = u.id
+        GROUP BY s.id
+        ORDER BY s.created_at DESC
+    """)
+
+    shelves = []
+    for row in cur.fetchall():
+        shelves.append(dict(row))
+
+    conn.close()
+    return shelves
+
+
+@app.get("/shelves/{shelf_id}", response_model=ShelfResponse)
+def get_shelf(shelf_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT s.*, 
+               COUNT(si.id) as item_count,
+               u.username as created_by_name
+        FROM shelves s
+        LEFT JOIN shelf_items si ON s.id = si.shelf_id
+        LEFT JOIN users u ON s.created_by = u.id
+        WHERE s.id = ?
+        GROUP BY s.id
+    """, (shelf_id,))
+
+    shelf = cur.fetchone()
+    conn.close()
+
+    if not shelf:
+        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
+
+    return dict(shelf)
+
+
+@app.post("/shelves", response_model=ShelfResponse)
+def create_shelf(shelf: ShelfCreate, current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Verifica se já existe prateleira com mesmo nome
+    cur.execute("SELECT id FROM shelves WHERE name = ?", (shelf.name,))
+    if cur.fetchone():
+        conn.close()
+        raise HTTPException(
+            status_code=400, detail="Prateleira com este nome já existe"
+        )
+
+    # Cria prateleira
+    cur.execute(
+        """
+        INSERT INTO shelves (name, description, created_by)
+        VALUES (?, ?, ?)
+    """,
+        (shelf.name, shelf.description, current_user["id"]),
+    )
+
+    shelf_id = cur.lastrowid
+    conn.commit()
+
+    # Retorna prateleira criada
+    cur.execute(
+        """
+        SELECT s.*, 0 as item_count
+        FROM shelves s
+        WHERE s.id = ?
+    """,
+        (shelf_id,),
+    )
+
+    shelf_data = dict(cur.fetchone())
+    conn.close()
+
+    return shelf_data
 
 
 @app.put("/shelves/{shelf_id}", response_model=ShelfResponse)
@@ -344,6 +436,121 @@ def delete_shelf(shelf_id: int, current_user: dict = Depends(get_current_user)):
     conn.close()
 
     return {"success": True, "message": "Prateleira excluída com sucesso"}
+
+
+# ==================== ENDPOINTS DE ITENS ====================
+
+
+@app.get("/shelves/{shelf_id}/items", response_model=List[ShelfItemResponse])
+async def get_shelf_items(
+    shelf_id: int,
+    include_product_data: bool = True,
+    current_user: dict = Depends(get_current_user),
+):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute(
+        """
+        SELECT *
+        FROM shelf_items
+        WHERE shelf_id = ?
+        ORDER BY added_at DESC
+        """,
+        (shelf_id,),
+    )
+
+    rows = cur.fetchall()
+    conn.close()
+
+    items = []
+
+    for row in rows:
+        item = dict(row)
+
+        product_data = None
+        if include_product_data:
+            product_info = await get_wordpress_product(item["product_id"])
+            if product_info:
+                product_data = ProductReference(**product_info)
+
+        items.append(
+            ShelfItemResponse(
+                **item,
+                product_data=product_data,
+            )
+        )
+
+    return items
+
+
+@app.post("/shelves/{shelf_id}/items", response_model=ShelfItemResponse)
+async def add_item_to_shelf(
+    shelf_id: int,
+    item: ShelfItemAdd,
+    current_user: dict = Depends(get_current_user),
+):
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Verifica se prateleira existe
+    cur.execute("SELECT id FROM shelves WHERE id = ?", (shelf_id,))
+    if not cur.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
+
+    # Verifica se produto já está em outra prateleira
+    cur.execute(
+        "SELECT shelf_id FROM shelf_items WHERE product_id = ?",
+        (item.product_id,),
+    )
+    if cur.fetchone():
+        conn.close()
+        raise HTTPException(
+            status_code=409,
+            detail="Produto já está em uma prateleira",
+        )
+
+    # 🔥 (Opcional) Validar se produto existe no WP
+    product_info = await get_wordpress_product(item.product_id)
+    if not product_info:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Produto não existe no WordPress")
+
+    # Inserir referência na prateleira
+    cur.execute(
+        """
+        INSERT INTO shelf_items (shelf_id, product_id, quantity, added_by)
+        VALUES (?, ?, ?, ?)
+        """,
+        (
+            shelf_id,
+            item.product_id,
+            item.quantity,
+            current_user["id"],
+        ),
+    )
+
+    # Capturar o ID do item recém-inserido (deve ser antes do histórico)
+    item_id = cur.lastrowid
+
+    # Inserir no histórico (entrada)
+    cur.execute(
+        """
+        INSERT INTO item_history (product_id, shelf_id, entrada)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        """,
+        (item.product_id, shelf_id),
+    )
+
+    conn.commit()
+
+    # Buscar o item completo para retornar
+    cur.execute("SELECT * FROM shelf_items WHERE id = ?", (item_id,))
+    item_data = dict(cur.fetchone())
+    conn.close()
+
+    return ShelfItemResponse(**item_data)
 
 
 @app.delete("/shelves/{shelf_id}/items/{product_id}")
@@ -459,6 +666,182 @@ def move_item(move: ShelfItemMove, current_user: dict = Depends(get_current_user
     )
 
 
+# ==================== ENDPOINTS DE PRODUTOS ====================
+
+
+@app.get("/products/search")
+async def search_products(
+    request: Request,
+    q: str = Query(..., description="Termo de busca"),
+    type: str = Query("name", description="Tipo de busca: 'name' ou 'sku'"),
+    limit: int = Query(20, description="Limite de resultados"),
+):
+    """Busca produtos no WordPress por nome ou SKU e adiciona info de prateleira"""
+    try:
+        print(f"Buscando produtos - Termo: {q}, Tipo: {type}, Limite: {limit}")
+
+        # Busca no WordPress
+        products = await search_wordpress_products(
+            search=q, search_type=type, limit=limit
+        )
+
+        # Adicionar informação de prateleira para cada produto
+        conn = get_db()
+        cur = conn.cursor()
+        for product in products:
+            product_id = product.get("id")
+            cur.execute(
+                """
+                SELECT si.shelf_id, s.name as shelf_name
+                FROM shelf_items si
+                JOIN shelves s ON si.shelf_id = s.id
+                WHERE si.product_id = ?
+                """,
+                (product_id,),
+            )
+            shelf_info = cur.fetchone()
+            if shelf_info:
+                product["in_shelf"] = shelf_info["shelf_id"]
+                product["shelf_name"] = shelf_info["shelf_name"]
+            else:
+                product["in_shelf"] = None
+                product["shelf_name"] = None
+        conn.close()
+
+        return {
+            "success": True,
+            "data": products,
+            "count": len(products),
+            "search_type": type,
+        }
+
+    except Exception as e:
+        print(f"Erro na busca de produtos: {e}")
+        import traceback
+
+        traceback.print_exc()
+        return {"success": False, "error": str(e), "data": []}
+
+
+@app.get("/products/check/{product_id}")
+async def check_product_status(
+    product_id: int, current_user: dict = Depends(get_current_user)
+):
+    """Verifica status de um produto (se existe e onde está)"""
+    conn = get_db()
+    cur = conn.cursor()
+
+    # Verifica se está em alguma prateleira
+    cur.execute(
+        """
+        SELECT si.shelf_id, s.name as shelf_name
+        FROM shelf_items si
+        JOIN shelves s ON si.shelf_id = s.id
+        WHERE si.product_id = ?
+    """,
+        (product_id,),
+    )
+
+    shelf_info = cur.fetchone()
+
+    # Busca dados do produto no WordPress
+    product_data = None
+    try:
+        product_data = await get_wordpress_product(product_id)
+    except:
+        pass
+
+    conn.close()
+
+    return {
+        "success": True,
+        "product_id": product_id,
+        "in_shelf": shelf_info["shelf_id"] if shelf_info else None,
+        "shelf_name": shelf_info["shelf_name"] if shelf_info else None,
+        "product_exists_in_wp": product_data is not None,
+        "product_data": product_data,
+    }
+
+
+# ==================== ENDPOINT DE BATCH PARA LOCALIZAÇÃO DE PRODUTOS ====================
+# Adicionado para permitir que o frontend consulte a localização de vários produtos de uma só vez,
+# otimizando a busca direta no WordPress.
+
+@app.post("/products/batch-status")
+async def batch_product_status(product_ids: List[int], current_user: dict = Depends(get_current_user)):
+    """Retorna a localização atual de múltiplos produtos"""
+    if not product_ids:
+        return {}
+    
+    conn = get_db()
+    cur = conn.cursor()
+    
+    # Cria placeholders dinâmicos (?,?,?...)
+    placeholders = ','.join(['?'] * len(product_ids))
+    
+    cur.execute(f"""
+        SELECT product_id, shelf_id, s.name as shelf_name
+        FROM shelf_items si
+        JOIN shelves s ON si.shelf_id = s.id
+        WHERE product_id IN ({placeholders})
+    """, product_ids)
+    
+    rows = cur.fetchall()
+    conn.close()
+    
+    result = {}
+    for row in rows:
+        result[row["product_id"]] = {
+            "shelf_id": row["shelf_id"],
+            "shelf_name": row["shelf_name"]
+        }
+    
+    return result
+
+
+# ==================== ENDPOINT DE HISTÓRICO ====================
+
+
+@app.get("/items/{product_id}/history")
+def get_item_history(product_id: int, current_user: dict = Depends(get_current_user)):
+    conn = get_db()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT 
+            ih.id,
+            ih.product_id,
+            ih.shelf_id,
+            s.name as shelf_name,
+            ih.entrada,
+            ih.saida
+        FROM item_history ih
+        JOIN shelves s ON ih.shelf_id = s.id
+        WHERE ih.product_id = ?
+        ORDER BY ih.entrada DESC
+    """, (product_id,))
+
+    rows = cur.fetchall()
+    conn.close()
+
+    # Converter para lista de dicionários
+    history = []
+    for row in rows:
+        history.append({
+            "id": row["id"],
+            "product_id": row["product_id"],
+            "shelf_id": row["shelf_id"],
+            "shelf_name": row["shelf_name"],
+            "entrada": row["entrada"],
+            "saida": row["saida"]
+        })
+
+    return history
+
+
+# ==================== ENDPOINTS DE DASHBOARD ====================
+
+
 @app.get("/dashboard/stats")
 def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     """Estatísticas do sistema"""
@@ -500,45 +883,6 @@ def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     }
 
 
-@app.get("/products/check/{product_id}")
-async def check_product_status(
-    product_id: int, current_user: dict = Depends(get_current_user)
-):
-    """Verifica status de um produto (se existe e onde está)"""
-    conn = get_db()
-    cur = conn.cursor()
-
-    # Verifica se está em alguma prateleira
-    cur.execute(
-        """
-        SELECT si.shelf_id, s.name as shelf_name
-        FROM shelf_items si
-        JOIN shelves s ON si.shelf_id = s.id
-        WHERE si.product_id = ?
-    """,
-        (product_id,),
-    )
-
-    shelf_info = cur.fetchone()
-
-    # Busca dados do produto no WordPress
-    product_data = None
-    try:
-        product_data = await get_wordpress_product(product_id)
-    except:
-        pass
-
-    conn.close()
-
-    return {
-        "success": True,
-        "product_id": product_id,
-        "in_shelf": shelf_info["shelf_id"] if shelf_info else None,
-        "product_exists_in_wp": product_data is not None,
-        "product_data": product_data,
-    }
-
-
 # ==================== ENDPOINTS DE SAÚDE ====================
 
 
@@ -563,8 +907,9 @@ def root():
                 "DELETE /shelves/{id}/items/{pid}",
                 "POST /items/move",
             ],
-            "products": ["GET /products/search", "GET /products/check/{id}"],
+            "products": ["GET /products/search", "GET /products/check/{id}", "POST /products/batch-status"],
             "dashboard": ["GET /dashboard/stats"],
+            "history": ["GET /items/{product_id}/history"],
         },
     }
 
@@ -578,7 +923,6 @@ def health_check():
         cur.execute("SELECT 1")
         conn.close()
 
-        # Testa conexão com WordPress (opcional)
         return {
             "status": "healthy",
             "database": "connected",
@@ -636,7 +980,6 @@ async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
     return None
 
 
-# TODO: TERMINAR DE TESTAR AS CONECÇÕES E CONECTAR COM O FRONTEND
 async def search_wordpress_products(
     search: str, search_type: str = "name", limit: int = 20
 ) -> List[dict]:
@@ -681,305 +1024,3 @@ async def search_wordpress_products(
             traceback.print_exc()
 
     return []
-
-# ==================== ENDPOINTS DE PRATELEIRAS ====================
-
-
-@app.get("/shelves", response_model=List[ShelfResponse])
-def get_shelves(current_user: dict = Depends(get_current_user)):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT s.*, 
-               COUNT(si.id) as item_count,
-               u.username as created_by_name
-        FROM shelves s
-        LEFT JOIN shelf_items si ON s.id = si.shelf_id
-        LEFT JOIN users u ON s.created_by = u.id
-        GROUP BY s.id
-        ORDER BY s.created_at DESC
-    """)
-
-    shelves = []
-    for row in cur.fetchall():
-        shelves.append(dict(row))
-
-    conn.close()
-    return shelves
-
-# NOVO ENDPOINT: Buscar prateleira por ID
-@app.get("/shelves/{shelf_id}", response_model=ShelfResponse)
-def get_shelf(shelf_id: int, current_user: dict = Depends(get_current_user)):
-    conn = get_db()
-    cur = conn.cursor()
-    
-    cur.execute("""
-        SELECT s.*, 
-               COUNT(si.id) as item_count,
-               u.username as created_by_name
-        FROM shelves s
-        LEFT JOIN shelf_items si ON s.id = si.shelf_id
-        LEFT JOIN users u ON s.created_by = u.id
-        WHERE s.id = ?
-        GROUP BY s.id
-    """, (shelf_id,))
-    
-    shelf = cur.fetchone()
-    conn.close()
-    
-    if not shelf:
-        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
-    
-    return dict(shelf)
-
-@app.post("/shelves", response_model=ShelfResponse)
-def create_shelf(shelf: ShelfCreate, current_user: dict = Depends(get_current_user)):
-    conn = get_db()
-    cur = conn.cursor()
-
-    # Verifica se já existe prateleira com mesmo nome
-    cur.execute("SELECT id FROM shelves WHERE name = ?", (shelf.name,))
-    if cur.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=400, detail="Prateleira com este nome já existe"
-        )
-
-    # Cria prateleira
-    cur.execute(
-        """
-        INSERT INTO shelves (name, description, created_by)
-        VALUES (?, ?, ?)
-    """,
-        (shelf.name, shelf.description, current_user["id"]),
-    )
-
-    shelf_id = cur.lastrowid
-    conn.commit()
-
-    # Retorna prateleira criada
-    cur.execute(
-        """
-        SELECT s.*, 0 as item_count
-        FROM shelves s
-        WHERE s.id = ?
-    """,
-        (shelf_id,),
-    )
-
-    shelf_data = dict(cur.fetchone())
-    conn.close()
-
-    return shelf_data
-
-
-# ==================== ENDPOINTS DE ITENS (SIMPLIFICADOS) ====================
-
-
-@app.get("/shelves/{shelf_id}/items", response_model=List[ShelfItemResponse])
-async def get_shelf_items(
-    shelf_id: int,
-    include_product_data: bool = True,
-    current_user: dict = Depends(get_current_user),
-):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute(
-        """
-        SELECT *
-        FROM shelf_items
-        WHERE shelf_id = ?
-        ORDER BY added_at DESC
-        """,
-        (shelf_id,),
-    )
-
-    rows = cur.fetchall()
-    conn.close()
-
-    items = []
-
-    for row in rows:
-        item = dict(row)
-
-        product_data = None
-        if include_product_data:
-            product_info = await get_wordpress_product(item["product_id"])
-            if product_info:
-                product_data = ProductReference(**product_info)
-
-        items.append(
-            ShelfItemResponse(
-                **item,
-                product_data=product_data,
-            )
-        )
-
-    return items
-
-
-@app.post("/shelves/{shelf_id}/items", response_model=ShelfItemResponse)
-async def add_item_to_shelf(
-    shelf_id: int,
-    item: ShelfItemAdd,
-    current_user: dict = Depends(get_current_user),
-):
-    conn = get_db()
-    cur = conn.cursor()
-
-    # Verifica se prateleira existe
-    cur.execute("SELECT id FROM shelves WHERE id = ?", (shelf_id,))
-    if not cur.fetchone():
-        conn.close()
-        raise HTTPException(status_code=404, detail="Prateleira não encontrada")
-
-    # Verifica se produto já está em outra prateleira
-    cur.execute(
-        "SELECT shelf_id FROM shelf_items WHERE product_id = ?",
-        (item.product_id,),
-    )
-    if cur.fetchone():
-        conn.close()
-        raise HTTPException(
-            status_code=409,
-            detail="Produto já está em uma prateleira",
-        )
-
-    # 🔥 (Opcional) Validar se produto existe no WP
-    product_info = await get_wordpress_product(item.product_id)
-    if not product_info:
-        conn.close()
-        raise HTTPException(status_code=404, detail="Produto não existe no WordPress")
-
-    # Inserir referência na prateleira
-    cur.execute(
-        """
-        INSERT INTO shelf_items (shelf_id, product_id, quantity, added_by)
-        VALUES (?, ?, ?, ?)
-        """,
-        (
-            shelf_id,
-            item.product_id,
-            item.quantity,
-            current_user["id"],
-        ),
-    )
-
-    # Capturar o ID do item recém-inserido (deve ser antes do histórico)
-    item_id = cur.lastrowid
-
-    # Inserir no histórico (entrada)
-    cur.execute(
-        """
-        INSERT INTO item_history (product_id, shelf_id, entrada)
-        VALUES (?, ?, CURRENT_TIMESTAMP)
-        """,
-        (item.product_id, shelf_id),
-    )
-
-    conn.commit()
-
-    # Buscar o item completo para retornar
-    cur.execute("SELECT * FROM shelf_items WHERE id = ?", (item_id,))
-    item_data = dict(cur.fetchone())
-    conn.close()
-
-    return ShelfItemResponse(**item_data)
-
-
-# ==================== ENDPOINT DE BUSCA ====================
-
-@app.get("/products/search")
-async def search_products(
-    request: Request,
-    q: str = Query(..., description="Termo de busca"),
-    type: str = Query("name", description="Tipo de busca: 'name' ou 'sku'"),
-    limit: int = Query(20, description="Limite de resultados"),
-):
-    """Busca produtos no WordPress por nome ou SKU e adiciona info de prateleira"""
-    try:
-        # Log da requisição
-        print(f"Buscando produtos - Termo: {q}, Tipo: {type}, Limite: {limit}")
-
-        # Busca no WordPress
-        products = await search_wordpress_products(
-            search=q, search_type=type, limit=limit
-        )
-
-        # Adicionar informação de prateleira para cada produto
-        conn = get_db()
-        cur = conn.cursor()
-        for product in products:
-            product_id = product.get("id")
-            cur.execute(
-                """
-                SELECT si.shelf_id, s.name as shelf_name
-                FROM shelf_items si
-                JOIN shelves s ON si.shelf_id = s.id
-                WHERE si.product_id = ?
-                """,
-                (product_id,),
-            )
-            shelf_info = cur.fetchone()
-            if shelf_info:
-                product["in_shelf"] = shelf_info["shelf_id"]
-                product["shelf_name"] = shelf_info["shelf_name"]
-            else:
-                product["in_shelf"] = None
-                product["shelf_name"] = None
-        conn.close()
-
-        return {
-            "success": True,
-            "data": products,
-            "count": len(products),
-            "search_type": type,
-        }
-
-    except Exception as e:
-        print(f"Erro na busca de produtos: {e}")
-        import traceback
-
-        traceback.print_exc()
-        return {"success": False, "error": str(e), "data": []}
-    
-
-# ==================== ENDPOINT DE HISTÓRICO ====================
-
-@app.get("/items/{product_id}/history")
-def get_item_history(product_id: int, current_user: dict = Depends(get_current_user)):
-    conn = get_db()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT 
-            ih.id,
-            ih.product_id,
-            ih.shelf_id,
-            s.name as shelf_name,
-            ih.entrada,
-            ih.saida
-        FROM item_history ih
-        JOIN shelves s ON ih.shelf_id = s.id
-        WHERE ih.product_id = ?
-        ORDER BY ih.entrada DESC
-    """, (product_id,))
-
-    rows = cur.fetchall()
-    conn.close()
-
-    # Converter para lista de dicionários
-    history = []
-    for row in rows:
-        history.append({
-            "id": row["id"],
-            "product_id": row["product_id"],
-            "shelf_id": row["shelf_id"],
-            "shelf_name": row["shelf_name"],
-            "entrada": row["entrada"],
-            "saida": row["saida"]
-        })
-
-    return history

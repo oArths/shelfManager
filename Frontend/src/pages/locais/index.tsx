@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import * as I from 'lucide-react';
 import Modal from '../../components/modal';
-// import locais from '../../json/locais.json';
 import TableLocais from '../../components/table/tableLocais';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 import { apiFetch } from '../../services/api';
@@ -20,7 +19,7 @@ export default function Locais() {
   const [locais, setLocais] = useState<any[]>([]);
   const [selectedLocal, setSelectedLocal] = useState<any>(null);
 
-  // Estados para armazenar itens de cada prateleira (necessário para busca por SKU e Nome do Produto)
+  // Estados para armazenar itens de cada prateleira
   const [itemsByShelf, setItemsByShelf] = useState<Record<number, any[]>>({});
   const [loadingItems, setLoadingItems] = useState(false);
 
@@ -28,7 +27,8 @@ export default function Locais() {
   const loadAllItems = async (shelves: any[]) => {
     setLoadingItems(true);
     const map: Record<number, any[]> = {};
-    // Busca itens de cada prateleira em paralelo
+
+    // Busca itens de cada prateleira (o backend já retorna product_data)
     await Promise.all(
       shelves.map(async (shelf) => {
         try {
@@ -36,10 +36,11 @@ export default function Locais() {
           map[shelf.id] = items;
         } catch (error) {
           console.error(`Erro ao carregar itens da prateleira ${shelf.id}:`, error);
-          map[shelf.id] = []; // em caso de erro, considera vazio
+          map[shelf.id] = [];
         }
       })
     );
+
     setItemsByShelf(map);
     setLoadingItems(false);
   };
@@ -52,11 +53,9 @@ export default function Locais() {
 
     switch (optionChart) {
       case 'Nome da Prateleira':
-        // Filtra pelo nome da prateleira
         return local.name?.toLowerCase().includes(value);
 
       case 'Sku': {
-        // Filtra pelas prateleiras que possuem itens com o SKU pesquisado
         const items = itemsByShelf[local.id] || [];
         return items.some((item) =>
           item.product_data?.sku?.toLowerCase().includes(value)
@@ -64,7 +63,6 @@ export default function Locais() {
       }
 
       case 'Nome do Produto': {
-        // Filtra pelas prateleiras que possuem itens com o nome pesquisado
         const items = itemsByShelf[local.id] || [];
         return items.some((item) =>
           item.product_data?.name?.toLowerCase().includes(value)
@@ -83,7 +81,7 @@ export default function Locais() {
       });
 
       setDeleteModal(false);
-      await loadLocais(); // Recarrega a lista após excluir
+      await loadLocais();
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -97,7 +95,7 @@ export default function Locais() {
       });
 
       setEditModal(false);
-      await loadLocais(); // Recarrega a lista após atualizar
+      await loadLocais();
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -110,16 +108,13 @@ export default function Locais() {
   };
 
   useEffect(() => {
-    console.log('recarregou'); // Comentário original mantido
     loadLocais();
   }, []);
 
   const loadLocais = async () => {
     try {
       const data = await apiFetch('/shelves');
-      console.log('RETORNO API:', data); // Comentário original mantido
       setLocais(data);
-      // Após carregar as prateleiras, carrega os itens de cada uma para suportar buscas por SKU e nome
       await loadAllItems(data);
     } catch (error: any) {
       toast.error(error.message);
@@ -145,7 +140,7 @@ export default function Locais() {
       toast.success('Local criado com sucesso!');
       setNewLocalModal(false);
       setNewLocalName('');
-      await loadLocais(); // Recarrega a lista após criar
+      await loadLocais();
     } catch (error: any) {
       toast.error(error.message);
     }
@@ -200,7 +195,6 @@ export default function Locais() {
           </div>
         </fieldset>
 
-        {/* Indicador de carregamento dos itens - versão spinner discreto */}
         {loadingItems && (
           <div className="flex items-center justify-start gap-2 text-gray-500 text-sm py-1">
             <I.Loader className="animate-spin" size={16} />
@@ -211,7 +205,7 @@ export default function Locais() {
         <TableLocais data={filteredLocais} onEdit={handleEditModal} onRemove={handleDeleteModal} />
       </div>
 
-      {/* Modais (edit, create, delete) - mantidos iguais ao original */}
+      {/* Modais (igual ao original) */}
       {editModal && (
         <Modal
           onClose={() => setEditModal(false)}

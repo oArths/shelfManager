@@ -7,6 +7,7 @@ import TableHistory from '../../components/table/tableHistory';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
+import { wordpressApiFetch } from '../../services/wordpressApi';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function Local() {
@@ -21,15 +22,15 @@ export default function Local() {
   const [historyLocalModal, setHistoryLocalModal] = useState(false);
   const [optionChart, setOptionChart] = useState(chartOptions[0]);
 
-  // Novos estados para histórico
+  // Estados para histórico
   const [historyData, setHistoryData] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Estado para modal de confirmação de mover ao adicionar
+  // Modal de confirmação para mover ao adicionar
   const [moveConfirmModal, setMoveConfirmModal] = useState(false);
   const [productToMove, setProductToMove] = useState<any>(null);
 
-  // Estado para carregamento dos itens
+  // Carregamento dos itens
   const [loadingItems, setLoadingItems] = useState(false);
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -47,7 +48,7 @@ export default function Local() {
     }
   };
 
-  // Função para carregar detalhes da prateleira (nome)
+  // Carregar detalhes da prateleira (nome)
   const loadShelfDetails = async () => {
     if (!id) return;
     try {
@@ -58,20 +59,15 @@ export default function Local() {
     }
   };
 
-  // Define valor padrão no dropdown de mover quando as prateleiras forem carregadas
+  // Define valor padrão no dropdown de mover
   useEffect(() => {
     if (allShelves.length > 0 && selectedItem) {
-      // Seleciona a primeira prateleira diferente da atual
       const firstOtherShelf = allShelves.find(shelf => shelf.id !== selectedItem.shelf_id);
-      if (firstOtherShelf) {
-        setSelectedShelfMove(firstOtherShelf.id);
-      } else {
-        // Se não houver outra prateleira, limpa a seleção
-        setSelectedShelfMove('');
-      }
+      setSelectedShelfMove(firstOtherShelf?.id || '');
     }
   }, [allShelves, selectedItem]);
 
+  // Efeito para busca com debounce
   useEffect(() => {
     if (seacrh.length < 2) {
       setSearchResults([]);
@@ -80,25 +76,66 @@ export default function Local() {
 
     const timeout = setTimeout(() => {
       searchProducts();
-    }, 40);
+    }, 400);
 
     return () => clearTimeout(timeout);
   }, [seacrh]);
 
+  // FUNÇÃO DE BUSCA CORRIGIDA: sempre usa o endpoint /search do WordPress
+  // Isso contorna o erro 500 da rota /sku-search e mantém a funcionalidade completa.
   const searchProducts = async () => {
     try {
       setLoadingSearch(true);
+      
+      // 🔥 SOLUÇÃO: Sempre usa o endpoint /search, independente do tipo selecionado
+      const endpoint = '/search';
+      const params = { 
+        q: seacrh, 
+        limit: '20' 
+      };
 
-      const searchType = optionChart === 'Sku' ? 'sku' : 'name';
+      // Requisição direta ao WordPress
+      const response = await wordpressApiFetch(endpoint, { params });
+      const products = response.data || [];
 
-      const data = await apiFetch(
-        `/products/search?q=${encodeURIComponent(seacrh)}&type=${searchType}&limit=20`
-      );
+      // Buscar localização dos produtos em lote (no backend)
+      const productIds = products.map((p: any) => p.id);
+      if (productIds.length > 0) {
+        try {
+          const locationData = await apiFetch('/products/batch-status', {
+            method: 'POST',
+            body: JSON.stringify(productIds),
+          });
+          // locationData: { [productId]: { shelf_id, shelf_name } }
+          products.forEach((product: any) => {
+            const loc = locationData[product.id];
+            if (loc) {
+              product.in_shelf = loc.shelf_id;
+              product.shelf_name = loc.shelf_name;
+            } else {
+              product.in_shelf = null;
+              product.shelf_name = null;
+            }
+          });
+        } catch (err) {
+          console.error('Erro ao buscar localização em lote', err);
+          products.forEach((product: any) => {
+            product.in_shelf = null;
+            product.shelf_name = null;
+          });
+        }
+      } else {
+        products.forEach((product: any) => {
+          product.in_shelf = null;
+          product.shelf_name = null;
+        });
+      }
 
-      setSearchResults(data.data || []);
+      setSearchResults(products);
       setShowDropdown(true);
     } catch (error: any) {
       console.error(error);
+      toast.error('Erro ao buscar produtos');
     } finally {
       setLoadingSearch(false);
     }
@@ -107,8 +144,8 @@ export default function Local() {
   useEffect(() => {
     if (!id) return;
 
-    loadShelfDetails(); // Carrega o nome da prateleira
-    loadItems();        // Carrega os itens
+    loadShelfDetails();
+    loadItems();
   }, [id]);
 
   const loadItems = async () => {
@@ -134,7 +171,6 @@ export default function Local() {
   };
 
   const confirmMove = async () => {
-    // Verifica se uma prateleira válida foi selecionada
     if (!selectedShelfMove) {
       toast.error('Selecione uma prateleira para mover o produto.');
       return;
@@ -195,7 +231,6 @@ export default function Local() {
     setLoadingHistory(true);
     try {
       const data = await apiFetch(`/items/${item.product_id}/history`);
-      // Limita a 5 registros mais recentes (já ordenados por data decrescente)
       setHistoryData(data.slice(0, 5));
       setHistoryLocalModal(true);
     } catch (error) {
@@ -234,14 +269,11 @@ export default function Local() {
   const handleAddSingleProduct = async (product: any) => {
     if (!id) return;
 
-    // Verifica se o produto já está em alguma prateleira
     if (product.in_shelf) {
-      // Se já está na prateleira atual, exibe mensagem de erro
       if (Number(product.in_shelf) === Number(id)) {
         toast.error('Este produto já está nesta prateleira.');
         return;
       }
-      // Caso contrário, abre modal para mover de outra prateleira
       setShowDropdown(false);
       setProductToMove(product);
       setMoveConfirmModal(true);
