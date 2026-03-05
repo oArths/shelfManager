@@ -27,7 +27,7 @@ export default function Pagination({
       <button
         onClick={() => setOffset(Math.max(offset - limit, 0))}
         disabled={current === 1}
-        className="w-36 h-7 bg-secundary border border-border text-sm font-normal disabled:cursor-not-allowed disabled:opacity-50"
+        className="w-36 h-7 bg-secundary border border-border text-sm font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
       >
         Anterior
       </button>
@@ -37,7 +37,7 @@ export default function Pagination({
       <button
         onClick={() => setOffset(Math.min(offset + limit, (pages - 1) * limit))}
         disabled={current === pages}
-        className="w-36 h-7 bg-secundary border  border-border text-sm font-normal disabled:cursor-not-allowed disabled:opacity-50 "
+        className="w-36 h-7 bg-secundary border  border-border text-sm font-normal cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 "
       >
         Proximo
       </button>
