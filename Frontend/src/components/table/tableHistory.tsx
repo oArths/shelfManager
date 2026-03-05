@@ -10,7 +10,8 @@ interface HistoryItem {
 export default function TableHistory({ data }: { data: HistoryItem[] }): React.JSX.Element {
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    const date = new Date(dateStr);
+    // Adiciona 'Z' para forçar interpretação como UTC
+    const date = new Date(dateStr + 'Z');
     return date.toLocaleString('pt-BR', {
       day: '2-digit',
       month: '2-digit',
@@ -21,8 +22,11 @@ export default function TableHistory({ data }: { data: HistoryItem[] }): React.J
     }).replace(',', ' às');
   };
 
-  // Limita a exibição aos primeiros 5 registros
-  const limitedData = data.slice(0, 5);
+  // Ordena do mais recente para o mais antigo (assumindo que já vem ordenado)
+  const sortedData = [...data].sort((a, b) => new Date(b.entrada + 'Z').getTime() - new Date(a.entrada + 'Z').getTime());
+
+  // Limita aos 5 registros mais recentes
+  const limitedData = sortedData.slice(0, 5);
 
   return (
     <div className="flex flex-col items-start justify-between w-full min-h-70 h-auto bg-white border-l border-r border-border">
@@ -54,7 +58,7 @@ export default function TableHistory({ data }: { data: HistoryItem[] }): React.J
       </table>
       {data.length > 5 && (
         <div className="text-xs text-gray-500 p-2 text-center w-full">
-          Mostrando os 5 primeiros registros
+          Mostrando os 5 registros mais recentes
         </div>
       )}
     </div>
