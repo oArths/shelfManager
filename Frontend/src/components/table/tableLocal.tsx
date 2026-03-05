@@ -23,42 +23,26 @@ export default function TableLocal({
       {/* Área da tabela com altura fixa e rolagem vertical */}
       <div className="w-full h-[376.5px] overflow-y-auto">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[640px] md:min-w-full table-auto">
+          <table className="w-full table-fixed min-w-[900px]">
             <thead className="w-full">
               <tr className="thead-tr">
-                <td className="thead-td max-lg:hidden" scope="col">
-                  Imagem
-                </td>
-                <td className="thead-td" scope="col">
-                  Nome
-                </td>
-                <td className="thead-td max-xl:hidden" scope="col">
-                  SKU
-                </td>
-                <td className="thead-td max-xl:hidden" scope="col">
-                  Quantidade
-                </td>
-                <td className="thead-td" scope="col">
-                  Ações
-                </td>
+                <td className="thead-td max-lg:hidden w-[100px]" scope="col">Imagem</td>
+                <td className="thead-td w-[250px]" scope="col">Nome</td>
+                <td className="thead-td max-xl:hidden w-[150px]" scope="col">SKU</td>
+                <td className="thead-td max-xl:hidden w-[100px]" scope="col">Quantidade</td>
+                <td className="thead-td w-[300px]" scope="col">Ações</td>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
-                <tr className="w-full h-80 bg-white border border-y border-x-0 border-border cursor-pointer">
-                  <td
-                    colSpan={5}
-                    className="w-full h-full text-gray500 font-light text-base text-center bg-white"
-                  >
+                <tr className="w-full h-80 bg-white border border-y border-x-0 border-border">
+                  <td colSpan={5} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
                     Carregando...
                   </td>
                 </tr>
               ) : !data || data.length === 0 ? (
-                <tr className="w-full h-80 bg-white border border-y border-x-0 border-border cursor-pointer">
-                  <td
-                    colSpan={5}
-                    className="w-full h-full text-gray500 font-light text-base text-center bg-white"
-                  >
+                <tr className="w-full h-80 bg-white border border-y border-x-0 border-border">
+                  <td colSpan={5} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
                     item não encontrado...
                   </td>
                 </tr>
@@ -68,7 +52,7 @@ export default function TableLocal({
                   const mainImage = productData.image || productData.main_image || '';
                   return (
                     <tr key={item.id || index} className="tbody-tr">
-                      <td className="tbody-td max-xl:hidden" scope="row">
+                      <td className="tbody-td max-xl:hidden truncate" title={productData.name}>
                         <div className="w-full h-full flex items-center justify-center">
                           <figure className="bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
                             {mainImage ? (
@@ -85,28 +69,32 @@ export default function TableLocal({
                           </figure>
                         </div>
                       </td>
-                      <td className="tbody-td">{productData.name || 'Nome não disponível'}</td>
-                      <td className="tbody-td max-lg:hidden">
+                      <td className="tbody-td truncate" title={productData.name}>
+                        {productData.name || 'Nome não disponível'}
+                      </td>
+                      <td className="tbody-td max-lg:hidden truncate" title={productData.sku}>
                         {productData.sku || 'SKU não disponível'}
                       </td>
-                      <td className="tbody-td max-xl:hidden">{item.quantity || 1}</td>
+                      <td className="tbody-td max-xl:hidden truncate">
+                        {item.quantity || 1}
+                      </td>
                       <td className="tbody-td">
                         <div className="h-auto flex gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                           <button
                             onClick={() => onMove(item)}
-                            className="btn px-4 py-1 text-sm bg-blue200/80 text-white"
+                            className="btn px-4 py-1 text-sm bg-blue200/80 text-white whitespace-nowrap"
                           >
                             Mover
                           </button>
                           <button
                             onClick={() => onRemove(item)}
-                            className="btn px-4 py-1 text-sm bg-pink200/80 text-white"
+                            className="btn px-4 py-1 text-sm bg-pink200/80 text-white whitespace-nowrap"
                           >
                             Remover
                           </button>
                           <button
                             onClick={() => onHistory(item)}
-                            className="btn px-4 py-1 text-sm bg-yellow200/80 text-white"
+                            className="btn px-4 py-1 text-sm bg-yellow200/80 text-white whitespace-nowrap"
                           >
                             Historico
                           </button>
