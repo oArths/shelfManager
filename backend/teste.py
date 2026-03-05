@@ -2,7 +2,8 @@ import jwt
 import bcrypt
 import sqlite3
 import httpx
-from typing import TypedDict, Optional, List
+import asyncio  # 🔥 ADICIONADO para suporte a chamadas paralelas
+from typing import TypedDict, Optional, List, Dict  # 🔥 ADICIONADO Dict
 from pathlib import Path
 from jwt import PyJWTError
 from datetime import datetime
@@ -440,6 +441,38 @@ def delete_shelf(shelf_id: int, current_user: dict = Depends(get_current_user)):
 
 # ==================== ENDPOINTS DE ITENS ====================
 
+# 🔥 Cache simples para armazenar produtos já buscados (evita repetir requisições)
+_product_cache: Dict[int, Optional[WordpressProduct]] = {}
+
+async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
+    """Busca dados do produto no WordPress (com timeout aumentado para 10s)"""
+    async with httpx.AsyncClient(verify=False) as client:
+        try:
+            response = await client.get(
+                f"{WORDPRESS_API_URL}/by-id/{product_id}",
+                headers={"X-API-Key": WORDPRESS_API_KEY},
+                timeout=10.0,  # 🔥 Aumentado de 4 para 10 segundos
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("success"):
+                    return data.get("data")
+        except Exception as e:
+            print(f"Erro ao buscar produto {product_id}: {e}")
+
+    return None
+
+
+# 🔥 Função auxiliar para buscar produto com cache
+async def fetch_product_with_cache(pid: int) -> tuple[int, Optional[WordpressProduct]]:
+    """Busca um produto, utilizando cache se disponível"""
+    if pid in _product_cache:
+        return pid, _product_cache[pid]
+    prod = await get_wordpress_product(pid)
+    _product_cache[pid] = prod
+    return pid, prod
+
 
 @app.get("/shelves/{shelf_id}/items", response_model=List[ShelfItemResponse])
 async def get_shelf_items(
@@ -464,16 +497,32 @@ async def get_shelf_items(
     conn.close()
 
     items = []
+    if not rows:
+        return items
 
+    if not include_product_data:
+        # Se não precisar dos dados do produto, retorna só os itens
+        for row in rows:
+            items.append(ShelfItemResponse(**dict(row)))
+        return items
+
+    # 🔥 Extrai todos os IDs de produtos (únicos)
+    product_ids = list({row["product_id"] for row in rows})
+
+    # 🔥 Busca todos os produtos em paralelo
+    results = await asyncio.gather(*[fetch_product_with_cache(pid) for pid in product_ids])
+
+    # 🔥 Mapeia ID -> produto
+    products_map = dict(results)
+
+    # Monta a resposta
     for row in rows:
         item = dict(row)
-
-        product_data = None
-        if include_product_data:
-            product_info = await get_wordpress_product(item["product_id"])
-            if product_info:
-                product_data = ProductReference(**product_info)
-
+        prod = products_map.get(item["product_id"])
+        if prod:
+            product_data = ProductReference(**prod)
+        else:
+            product_data = None
         items.append(
             ShelfItemResponse(
                 **item,
@@ -958,26 +1007,6 @@ def get_db():
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")  # Ativa foreign keys
     return conn
-
-
-async def get_wordpress_product(product_id: int) -> Optional[WordpressProduct]:
-    """Busca dados do produto no WordPress"""
-    async with httpx.AsyncClient(verify=False) as client:
-        try:
-            response = await client.get(
-                f"{WORDPRESS_API_URL}/by-id/{product_id}",
-                headers={"X-API-Key": WORDPRESS_API_KEY},
-                timeout=4.0,
-            )
-
-            if response.status_code == 200:
-                data = response.json()
-                if data.get("success"):
-                    return data.get("data")
-        except Exception as e:
-            print(f"Erro ao buscar produto {product_id}: {e}")
-
-    return None
 
 
 async def search_wordpress_products(
