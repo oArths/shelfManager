@@ -1,0 +1,15 @@
+# Dependências do Composer 
+/vendor/
+
+# Banco de dados SQLite 
+/database/*.db
+
+# Arquivo de configuração de ambiente (não versionar)
+.env
+
+# Arquivos de log
+*.log
+
+# Arquivos temporários do sistema
+.DS_Store
+Thumbs.db

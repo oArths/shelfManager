@@ -7,13 +7,12 @@ import TableHistory from '../../components/table/tableHistory';
 import SingleDropdown from '../../components/dropdown/SingleDropdown';
 import { useParams } from 'react-router-dom';
 import { apiFetch } from '../../services/api';
-import { wordpressApiFetch } from '../../services/wordpressApi';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function Local() {
   const chartOptions = ['Nome do Produto', 'Sku'];
   const { id } = useParams();
-  const [seacrh, setSearch] = useState('');
+  const [search, setSearch] = useState('');
   const [items, setItems] = useState<any[]>([]);
   const [localName, setLocalName] = useState('');
   const [newLocalModal, setNewLocalModal] = useState(false);
@@ -69,7 +68,7 @@ export default function Local() {
 
   // Efeito para busca com debounce
   useEffect(() => {
-    if (seacrh.length < 2) {
+    if (search.length < 2) {
       setSearchResults([]);
       return;
     }
@@ -79,23 +78,13 @@ export default function Local() {
     }, 400);
 
     return () => clearTimeout(timeout);
-  }, [seacrh]);
+  }, [search]);
 
-  // FUNÇÃO DE BUSCA CORRIGIDA: sempre usa o endpoint /search do WordPress
-  // Isso contorna o erro 500 da rota /sku-search e mantém a funcionalidade completa.
+  // Função de busca de produtos usando o backend
   const searchProducts = async () => {
     try {
       setLoadingSearch(true);
-      
-      // 🔥 SOLUÇÃO: Sempre usa o endpoint /search, independente do tipo selecionado
-      const endpoint = '/search';
-      const params = { 
-        q: seacrh, 
-        limit: '20' 
-      };
-
-      // Requisição direta ao WordPress
-      const response = await wordpressApiFetch(endpoint, { params });
+      const response = await apiFetch(`/products/search?q=${encodeURIComponent(search)}&limit=20`);
       const products = response.data || [];
 
       // Buscar localização dos produtos em lote (no backend)
@@ -106,7 +95,6 @@ export default function Local() {
             method: 'POST',
             body: JSON.stringify(productIds),
           });
-          // locationData: { [productId]: { shelf_id, shelf_name } }
           products.forEach((product: any) => {
             const loc = locationData[product.id];
             if (loc) {
@@ -321,7 +309,7 @@ export default function Local() {
               <input
                 placeholder="Pesquisar..."
                 className="input w-full px-12 bg-white"
-                value={seacrh}
+                value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
               />
@@ -332,29 +320,36 @@ export default function Local() {
                 {searchResults.map((product) => (
                   <div
                     key={product.id}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex justify-between items-center gap-5"
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer flex items-center gap-4"
                   >
-                    <div className="flex flex-row gap-5">
-                      <figure className="bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center">
-                        <img
-                          src={product.image || product.main_image || ''}
-                          alt={product.name || 'Produto'}
-                          className="aspect-square object-cover"
-                        />
-                      </figure>
-                      <span className="text-sm h-auto flex justify-center items-center">
-                        {optionChart === 'Sku' ? product.sku : product.name}
-                      </span>
-                    </div>
+                    {/* Imagem - fixa */}
+                    <figure className="bg-border rounded-md w-10 h-10 p-1 flex items-center justify-center flex-shrink-0">
+                      <img
+                        src={product.image || product.main_image || ''}
+                        alt={product.name || 'Produto'}
+                        className="aspect-square object-cover"
+                      />
+                    </figure>
 
+                    {/* Nome do produto - flexível com truncamento */}
+                    <span
+                      className="text-sm truncate flex-1"
+                      title={optionChart === 'Sku' ? product.sku : product.name}
+                    >
+                      {optionChart === 'Sku' ? product.sku : product.name}
+                    </span>
+
+                    {/* Aviso (se existir) - fixo */}
                     {product.in_shelf && (
-                      <span className="text-xs flex justify-center items-center text-red-500">
+                      <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
                         Já está em {product.shelf_name}
                       </span>
                     )}
+
+                    {/* Botão Adicionar - fixo */}
                     <button
                       onClick={() => handleAddSingleProduct(product)}
-                      className="btn text-white text-sm h-8 px-5 bg-blue200 hover:bg-blue300"
+                      className="btn text-white text-sm h-8 px-5 bg-blue200 hover:bg-blue300 whitespace-nowrap flex-shrink-0"
                     >
                       Adicionar
                     </button>
@@ -382,7 +377,7 @@ export default function Local() {
         />
       </div>
 
-      {/* Modal de confirmação para mover produto ao adicionar */}
+      {/* Modais - mantidos iguais */}
       {moveConfirmModal && productToMove && (
         <Modal
           onClose={() => {
@@ -424,7 +419,6 @@ export default function Local() {
         />
       )}
 
-      {/* Modal de confirmação para remover item */}
       {removeLocalModal && selectedItem && (
         <Modal
           onClose={() => setRemoveLocalModal(false)}
@@ -460,7 +454,6 @@ export default function Local() {
         />
       )}
 
-      {/* Modal de histórico */}
       {historyLocalModal && selectedItem && (
         <Modal
           onClose={() => setHistoryLocalModal(false)}
@@ -494,7 +487,6 @@ export default function Local() {
         />
       )}
 
-      {/* Modal de mover item */}
       {newLocalModal && selectedItem && (
         <Modal
           onClose={() => setNewLocalModal(false)}

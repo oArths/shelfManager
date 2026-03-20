@@ -6,18 +6,9 @@
   box-sizing: border-box;
   transition: all 0.3s ease-in-out;
   font-family: 'Inter', sans-serif;
+  user-select: none;
 }
 
-/* Remove qualquer outline de foco */
-*:focus,
-*:focus-visible {
-  outline: none !important;
-}
-
-/* Remove o caret (cursor de texto) de elementos que não são inputs ou textarea */
-*:not(input):not(textarea):not([contenteditable]) {
-  caret-color: transparent;
-}
 
 .btn {
   @apply flex items-center justify-center rounded-md text-center active:scale-[0.99] duration-75 ease-linear cursor-pointer;
