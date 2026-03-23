@@ -23,26 +23,42 @@ export default function TableLocal({
       {/* Área da tabela com altura fixa e rolagem vertical */}
       <div className="w-full h-[376.5px] overflow-y-auto">
         <div className="overflow-x-auto">
-          <table className="w-full table-fixed min-w-[900px]">
+          <table className="w-full table-fixed min-w-225">
             <thead className="w-full">
               <tr className="thead-tr">
-                <td className="thead-td max-lg:hidden w-[100px]" scope="col">Imagem</td>
-                <td className="thead-td w-[250px]" scope="col">Nome</td>
-                <td className="thead-td max-xl:hidden w-[150px]" scope="col">SKU</td>
-                <td className="thead-td max-xl:hidden w-[100px]" scope="col">Quantidade</td>
-                <td className="thead-td w-[300px]" scope="col">Ações</td>
+                <td className="thead-td max-xl:hidden " scope="col">
+                  Imagem
+                </td>
+                <td className="thead-td " scope="col">
+                  Nome
+                </td>
+                <td className="thead-td max-lg:hidden " scope="col">
+                  SKU
+                </td>
+                <td className="thead-td max-xl:hidden " scope="col">
+                  Quantidade
+                </td>
+                <td className="thead-td w" scope="col">
+                  Ações
+                </td>
               </tr>
             </thead>
             <tbody>
               {isLoading ? (
                 <tr className="w-full h-80 bg-white border border-y border-x-0 border-border">
-                  <td colSpan={5} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
+                  <td
+                    colSpan={5}
+                    className="w-full h-full text-gray500 font-light text-base text-center bg-white"
+                  >
                     Carregando...
                   </td>
                 </tr>
               ) : !data || data.length === 0 ? (
                 <tr className="w-full h-80 bg-white border border-y border-x-0 border-border">
-                  <td colSpan={5} className="w-full h-full text-gray500 font-light text-base text-center bg-white">
+                  <td
+                    colSpan={5}
+                    className="w-full h-full text-gray500 font-light text-base text-center bg-white"
+                  >
                     item não encontrado...
                   </td>
                 </tr>
@@ -69,15 +85,13 @@ export default function TableLocal({
                           </figure>
                         </div>
                       </td>
-                      <td className="tbody-td truncate" title={productData.name}>
+                      <td className="tbody-td truncate px-5" title={productData.name}>
                         {productData.name || 'Nome não disponível'}
                       </td>
                       <td className="tbody-td max-lg:hidden truncate" title={productData.sku}>
                         {productData.sku || 'SKU não disponível'}
                       </td>
-                      <td className="tbody-td max-xl:hidden truncate">
-                        {item.quantity || 1}
-                      </td>
+                      <td className="tbody-td max-xl:hidden truncate">{item.quantity || 1}</td>
                       <td className="tbody-td">
                         <div className="h-auto flex gap-1 lg:gap-3 flex-row items-center justify-center px-5">
                           <button

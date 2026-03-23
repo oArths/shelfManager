@@ -31,7 +31,7 @@ export default function Pagination({
       >
         Anterior
       </button>
-      <span className=" text-white font-normal text-base text-center select-none">
+      <span className=" text-black font-normal text-base text-center select-none">
         {current} de {pages}
       </span>
       <button
