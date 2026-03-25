@@ -14,7 +14,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const isAuthenticated = !!token;
   const login = async (username: string, password: string) => {
     try {
-      const response = await fetch('https://lebrecho.com.br/index.php?shelf_api=/auth/login', {
+      const response = await fetch('https://lebrecho.com.br/index.php?shelf_api=auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
