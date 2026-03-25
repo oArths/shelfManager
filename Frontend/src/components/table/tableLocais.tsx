@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Pagination from '../pagination';
 import type { Local } from './interface';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 export default function TableLocais({
   data,
@@ -15,7 +15,6 @@ export default function TableLocais({
   const [offset, setOffSet] = useState(0);
   const limit = 7;
   const navigate = useNavigate();
-  const location = useLocation();
 
   useEffect(() => {
     if (offset >= data.length && offset !== 0) {

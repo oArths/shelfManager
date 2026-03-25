@@ -34,7 +34,6 @@ export default function Local() {
 
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [loadingSearch, setLoadingSearch] = useState(false);
   const [allShelves, setAllShelves] = useState<any[]>([]);
   const [selectedShelfMove, setSelectedShelfMove] = useState<string>('');
 
@@ -83,7 +82,6 @@ export default function Local() {
   // Função de busca de produtos usando o backend
   const searchProducts = async () => {
     try {
-      setLoadingSearch(true);
       const response = await apiFetch(`/products/search?q=${encodeURIComponent(search)}&limit=20`);
       const products = response.data || [];
 
@@ -125,7 +123,6 @@ export default function Local() {
       console.error(error);
       toast.error('Erro ao buscar produtos');
     } finally {
-      setLoadingSearch(false);
     }
   };
 
@@ -341,7 +338,7 @@ export default function Local() {
 
                     {/* Aviso (se existir) - fixo */}
                     {product.in_shelf && (
-                      <span className="text-xs text-red-500 whitespace-nowrap flex-shrink-0">
+                      <span className="text-xs text-red-500 whitespace-nowrap shrink-0">
                         Já está em {product.shelf_name}
                       </span>
                     )}
@@ -349,7 +346,7 @@ export default function Local() {
                     {/* Botão Adicionar - fixo */}
                     <button
                       onClick={() => handleAddSingleProduct(product)}
-                      className="btn text-white text-sm h-8 px-5 bg-blue200 hover:bg-blue300 whitespace-nowrap flex-shrink-0"
+                      className="btn text-white text-sm h-8 px-5 bg-blue200 hover:bg-blue300 whitespace-nowrap shrink-0"
                     >
                       Adicionar
                     </button>
@@ -391,7 +388,7 @@ export default function Local() {
               </div>
               <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>{productToMove.name}</p>
-                <p className="text-yellow200 break-words text-center text-base font-normal mt-2">
+                <p className="text-yellow200 wrap-break-word text-center text-base font-normal mt-2">
                   já está em {productToMove.shelf_name}. Deseja mover para {localName}?
                 </p>
               </h2>
@@ -429,7 +426,7 @@ export default function Local() {
               </div>
               <h2 className="font-medium text-2xl text-black text-center w-full">
                 <p>Deseja realmente excluir</p>
-                <p className="text-pink200 break-words text-center">
+                <p className="text-pink200 wrap-break-word text-center">
                   {selectedItem.product_data?.name || 'este item'}
                 </p>
               </h2>
