@@ -39,7 +39,7 @@ export default function Local() {
 
   const loadShelves = async () => {
     try {
-      const data = await apiFetch('/shelves');
+      const data = await apiFetch('shelves');
       setAllShelves(data);
     } catch (error) {
       console.error(error);
@@ -50,7 +50,7 @@ export default function Local() {
   const loadShelfDetails = async () => {
     if (!id) return;
     try {
-      const data = await apiFetch(`/shelves/${id}`);
+      const data = await apiFetch(`shelves/${id}`);
       setLocalName(data.name);
     } catch (error) {
       console.error('Erro ao carregar nome da prateleira:', error);
@@ -82,14 +82,14 @@ export default function Local() {
   // Função de busca de produtos usando o backend
   const searchProducts = async () => {
     try {
-      const response = await apiFetch(`/products/search?q=${encodeURIComponent(search)}&limit=20`);
+      const response = await apiFetch(`products/search?q=${encodeURIComponent(search)}&limit=20`);
       const products = response.data || [];
 
       // Buscar localização dos produtos em lote (no backend)
       const productIds = products.map((p: any) => p.id);
       if (productIds.length > 0) {
         try {
-          const locationData = await apiFetch('/products/batch-status', {
+          const locationData = await apiFetch('products/batch-status', {
             method: 'POST',
             body: JSON.stringify(productIds),
           });
@@ -136,7 +136,7 @@ export default function Local() {
   const loadItems = async () => {
     setLoadingItems(true);
     try {
-      const data = await apiFetch(`/shelves/${id}/items`);
+      const data = await apiFetch(`shelves/${id}/items`);
       setItems(data);
     } catch (error: any) {
       console.error(error);
@@ -166,7 +166,7 @@ export default function Local() {
     }
 
     try {
-      await apiFetch('/items/move', {
+      await apiFetch('items/move', {
         method: 'POST',
         body: JSON.stringify({
           product_id: selectedItem.product_id,
@@ -193,7 +193,7 @@ export default function Local() {
     if (!id || !selectedItem) return;
 
     try {
-      await apiFetch(`/shelves/${id}/items/${selectedItem.product_id}`, {
+      await apiFetch(`shelves/${id}/items/${selectedItem.product_id}`, {
         method: 'DELETE',
       });
 
@@ -215,7 +215,7 @@ export default function Local() {
     setSelectedItem(item);
     setLoadingHistory(true);
     try {
-      const data = await apiFetch(`/items/${item.product_id}/history`);
+      const data = await apiFetch(`items/${item.product_id}/history`);
       setHistoryData(data.slice(0, 5));
       setHistoryLocalModal(true);
     } catch (error) {
@@ -230,7 +230,7 @@ export default function Local() {
     if (!id || !productToMove) return;
 
     try {
-      await apiFetch('/items/move', {
+      await apiFetch('items/move', {
         method: 'POST',
         body: JSON.stringify({
           product_id: productToMove.id,
@@ -266,7 +266,7 @@ export default function Local() {
     }
 
     try {
-      await apiFetch(`/shelves/${id}/items`, {
+      await apiFetch(`shelves/${id}/items`, {
         method: 'POST',
         body: JSON.stringify({
           product_id: product.id,

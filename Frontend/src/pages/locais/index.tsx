@@ -32,7 +32,7 @@ export default function Locais() {
     await Promise.all(
       shelves.map(async (shelf) => {
         try {
-          const items = await apiFetch(`/shelves/${shelf.id}/items`);
+          const items = await apiFetch(`shelves/${shelf.id}/items`);
           map[shelf.id] = items;
         } catch (error) {
           console.error(`Erro ao carregar itens da prateleira ${shelf.id}:`, error);
@@ -76,7 +76,7 @@ export default function Locais() {
 
   const handleDeleteLocal = async () => {
     try {
-      await apiFetch(`/shelves/${selectedLocal.id}`, {
+      await apiFetch(`shelves/${selectedLocal.id}`, {
         method: 'DELETE',
       });
 
@@ -89,7 +89,7 @@ export default function Locais() {
 
   const handleUpdateLocal = async () => {
     try {
-      await apiFetch(`/shelves/${selectedLocal.id}`, {
+      await apiFetch(`shelves/${selectedLocal.id}`, {
         method: 'PUT',
         body: JSON.stringify({ name: changeName }),
       });
@@ -113,7 +113,7 @@ export default function Locais() {
 
   const loadLocais = async () => {
     try {
-      const data = await apiFetch('/shelves');
+      const data = await apiFetch('shelves');
       setLocais(data);
       await loadAllItems(data);
     } catch (error: any) {
@@ -129,7 +129,7 @@ export default function Locais() {
       return;
     }
     try {
-      await apiFetch('/shelves', {
+      await apiFetch('shelves', {
         method: 'POST',
         body: JSON.stringify({
           name: newLocalName,
