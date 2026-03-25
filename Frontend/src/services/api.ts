@@ -1,7 +1,7 @@
 export const apiFetch = async (url: string, options: any = {}) => {
   const token = localStorage.getItem('token');
 
-  const response = await fetch(`https://lebrecho.com.br/api/shelf${url}`, {
+  const response = await fetch(`https://lebrecho.com.br/index.php?shelf_api=${url}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
