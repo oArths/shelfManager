@@ -18,6 +18,8 @@ export default function TableLocal({
   const [offset, setOffSet] = useState(0);
   const limit = 7;
 
+  
+
   return (
     <div className="flex flex-col items-start justify-between w-full bg-white border-l border-r border-border">
       {/* Área da tabela com altura fixa e rolagem vertical */}

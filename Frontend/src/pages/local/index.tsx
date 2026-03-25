@@ -138,6 +138,8 @@ export default function Local() {
     try {
       const data = await apiFetch(`shelves/${id}/items`);
       setItems(data);
+      console.log(data)
+      console.log("tete",data)
     } catch (error: any) {
       console.error(error);
       toast.error('Erro ao carregar itens');
