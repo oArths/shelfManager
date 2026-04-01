@@ -145,7 +145,7 @@ function shelf_manager_create_admin()
 
     $result = $db->query("SELECT id FROM users WHERE username = 'admin'");
     if (!$result->fetchArray()) {
-        $hash = password_hash('123456', PASSWORD_DEFAULT);
+        $hash = password_hash('senhadificil', PASSWORD_DEFAULT);
         $stmt = $db->prepare("INSERT INTO users (username, password_hash, isAdmin) VALUES ('admin', :hash, 1)");
         $stmt->bindValue(':hash', $hash, SQLITE3_TEXT);
         $stmt->execute();

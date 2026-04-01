@@ -37,14 +37,15 @@ export default function Local() {
   const [allShelves, setAllShelves] = useState<any[]>([]);
   const [selectedShelfMove, setSelectedShelfMove] = useState<string>('');
 
-  const loadShelves = async () => {
-    try {
-      const data = await apiFetch('shelves');
-      setAllShelves(data);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+const loadShelves = async () => {
+  try {
+    const data = await apiFetch('shelves');
+    setAllShelves(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error(error);
+    setAllShelves([]);
+  }
+};
 
   // Carregar detalhes da prateleira (nome)
   const loadShelfDetails = async () => {
@@ -80,52 +81,22 @@ export default function Local() {
   }, [search]);
 
   // Função de busca de produtos usando o backend
-  const searchProducts = async () => {
-    try {
-      const response = await apiFetch(`products/search?q=${encodeURIComponent(search)}&limit=20`);
-      const products = response.data || [];
+const searchProducts = async () => {
+  try {
+    const response = await apiFetch(`products/search?q=${encodeURIComponent(search)}&limit=20`);
+    const products = response.data || [];
 
-      // Buscar localização dos produtos em lote (no backend)
-      const productIds = products.map((p: any) => p.id);
-      if (productIds.length > 0) {
-        try {
-          const locationData = await apiFetch('products/batch-status', {
-            method: 'POST',
-            body: JSON.stringify(productIds),
-          });
-          products.forEach((product: any) => {
-            const loc = locationData[product.id];
-            if (loc) {
-              product.in_shelf = loc.shelf_id;
-              product.shelf_name = loc.shelf_name;
-            } else {
-              product.in_shelf = null;
-              product.shelf_name = null;
-            }
-          });
-        } catch (err) {
-          console.error('Erro ao buscar localização em lote', err);
-          products.forEach((product: any) => {
-            product.in_shelf = null;
-            product.shelf_name = null;
-          });
-        }
-      } else {
-        products.forEach((product: any) => {
-          product.in_shelf = null;
-          product.shelf_name = null;
-        });
-      }
+    // Garante que products é array
+    const productsArray = Array.isArray(products) ? products : [];
 
-      setSearchResults(products);
-      setShowDropdown(true);
-    } catch (error: any) {
-      console.error(error);
-      toast.error('Erro ao buscar produtos');
-    } finally {
-    }
-  };
-
+    // ... resto do código
+    setSearchResults(productsArray);
+  } catch (error: any) {
+    console.error(error);
+    toast.error('Erro ao buscar produtos');
+    setSearchResults([]); // Garante array vazio
+  }
+};
   useEffect(() => {
     if (!id) return;
 
@@ -133,20 +104,21 @@ export default function Local() {
     loadItems();
   }, [id]);
 
-  const loadItems = async () => {
-    setLoadingItems(true);
-    try {
-      const data = await apiFetch(`shelves/${id}/items`);
-      setItems(data);
-      console.log(data)
-      console.log("tete",data)
-    } catch (error: any) {
-      console.error(error);
-      toast.error('Erro ao carregar itens');
-    } finally {
-      setLoadingItems(false);
-    }
-  };
+ const loadItems = async () => {
+   setLoadingItems(true);
+   try {
+     const data = await apiFetch(`shelves/${id}/items`);
+     // Garante que items seja sempre um array
+     setItems(Array.isArray(data) ? data : []);
+     console.log(data);
+   } catch (error: any) {
+     console.error(error);
+     toast.error('Erro ao carregar itens');
+     setItems([]); // Garante array vazio em caso de erro
+   } finally {
+     setLoadingItems(false);
+   }
+ };
 
   const HandlerChartOptionSelect = (option: string): void => {
     setOptionChart(option);
@@ -213,20 +185,28 @@ export default function Local() {
     setRemoveLocalModal(true);
   };
 
-  const handleHistory = async (item: any) => {
-    setSelectedItem(item);
-    setLoadingHistory(true);
-    try {
-      const data = await apiFetch(`items/${item.product_id}/history`);
-      setHistoryData(data.slice(0, 5));
-      setHistoryLocalModal(true);
-    } catch (error) {
-      console.error('Erro ao carregar histórico:', error);
-      toast.error('Erro ao carregar histórico.');
-    } finally {
-      setLoadingHistory(false);
-    }
-  };
+ const handleHistory = async (item: any) => {
+   setSelectedItem(item);
+   setLoadingHistory(true);
+   try {
+     const data = await apiFetch(`items/${item.product_id}/history`);
+     // Verifica se data é um array antes de usar slice
+     if (Array.isArray(data)) {
+       setHistoryData(data.slice(0, 5));
+     } else {
+       console.error('Dados de histórico não são um array:', data);
+       setHistoryData([]);
+       toast.error('Dados de histórico inválidos');
+     }
+     setHistoryLocalModal(true);
+   } catch (error) {
+     console.error('Erro ao carregar histórico:', error);
+     toast.error('Erro ao carregar histórico.');
+     setHistoryData([]); // Garante que é array vazio em caso de erro
+   } finally {
+     setLoadingHistory(false);
+   }
+ };
 
   const confirmMoveFromAdd = async () => {
     if (!id || !productToMove) return;
